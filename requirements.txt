@@ -1,0 +1,25 @@
+# Core Deep Learning & Transformers
+transformers
+datasets<2.19
+librosa
+
+
+# Data Processing & Numerical Analysis
+numpy
+pandas
+scipy
+scikit-learn
+datasets
+
+# Audio & Signal Processing
+librosa
+soundfile
+pydub
+
+
+# Forced Alignment & Utilities
+tqdm
+
+# Visualization for Layer-wise Profiles
+matplotlib
+seaborn
