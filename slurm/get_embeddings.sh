@@ -8,7 +8,7 @@
 # Resource allocation (TinyX specific)
 #SBATCH --partition=v100          # or 'gpu_test' for quick tests (<30min)
 #SBATCH --gres=gpu:v100:1       # Request 1 A100 GPU (adjust type if needed)
-#SBATCH --time=04:00:00          # Wall time (adjust based on sample count)
+#SBATCH --time=08:00:00          # Wall time (adjust based on sample count)
 
 
 
@@ -30,7 +30,7 @@ module load cuda/12.2                  # Match your PyTorch CUDA version
 #module load cudnn/8.9                  # cuDNN for GPU acceleration
 
 
-source $WORK/.conda/bin/activate feature  
+source $HOME/miniconda3/bin/activate feature  
 
 # Show GPU info
 echo "CUDA available devices:"
@@ -41,7 +41,6 @@ export HF_HOME=$WORK/.cache/huggingface
 export HF_DATASETS_CACHE=$WORK/.cache/huggingface/datasets
 export TRANSFORMERS_CACHE=$WORK/.cache/huggingface/transformers
 
-pip install torch
 
 OUTPUT_DIR=/home/woody/vlbi/vlbi108v/BIMAP-FEATURE/embeddings
 

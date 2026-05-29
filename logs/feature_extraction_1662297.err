@@ -1,0 +1,23 @@
+ERROR: Unable to locate a modulefile for 'cuda/12.2'
+2026-05-29 01:48:54,844 - INFO - Configuration:
+2026-05-29 01:48:54,844 - INFO -   Model: facebook/wav2vec2-base
+2026-05-29 01:48:54,844 - INFO -   Languages: ['en_us', 'de_de', 'es_419']
+2026-05-29 01:48:54,844 - INFO -   Max samples: 100
+2026-05-29 01:48:54,844 - INFO -   Output dir: /home/woody/vlbi/vlbi108v/BIMAP-FEATURE/embeddings
+2026-05-29 01:48:54,844 - INFO -   Device: cuda
+2026-05-29 01:48:54,844 - INFO - Loading model: facebook/wav2vec2-base
+2026-05-29 01:48:55,005 - INFO - HTTP Request: HEAD https://huggingface.co/facebook/wav2vec2-base/resolve/main/processor_config.json "HTTP/1.1 404 Not Found"
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+2026-05-29 01:48:55,006 - WARNING - Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+2026-05-29 01:48:55,126 - INFO - HTTP Request: HEAD https://huggingface.co/facebook/wav2vec2-base/resolve/main/preprocessor_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-05-29 01:48:55,136 - INFO - HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/facebook/wav2vec2-base/0b5b8e868dd84f03fd87d01f9c4ff0f080fecfe8/preprocessor_config.json "HTTP/1.1 200 OK"
+2026-05-29 01:48:55,155 - INFO - HTTP Request: GET https://huggingface.co/api/resolve-cache/models/facebook/wav2vec2-base/0b5b8e868dd84f03fd87d01f9c4ff0f080fecfe8/preprocessor_config.json "HTTP/1.1 200 OK"
+2026-05-29 01:48:55,274 - INFO - HTTP Request: HEAD https://huggingface.co/facebook/wav2vec2-base/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-05-29 01:48:55,284 - INFO - HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/facebook/wav2vec2-base/0b5b8e868dd84f03fd87d01f9c4ff0f080fecfe8/config.json "HTTP/1.1 200 OK"
+2026-05-29 01:48:55,296 - INFO - HTTP Request: GET https://huggingface.co/api/resolve-cache/models/facebook/wav2vec2-base/0b5b8e868dd84f03fd87d01f9c4ff0f080fecfe8/config.json "HTTP/1.1 200 OK"
+2026-05-29 01:48:55,416 - INFO - HTTP Request: HEAD https://huggingface.co/facebook/wav2vec2-base/resolve/main/model.safetensors "HTTP/1.1 404 Not Found"
+2026-05-29 01:48:55,529 - INFO - HTTP Request: HEAD https://huggingface.co/facebook/wav2vec2-base/resolve/main/model.safetensors.index.json "HTTP/1.1 404 Not Found"
+2026-05-29 01:48:55,652 - INFO - HTTP Request: HEAD https://huggingface.co/facebook/wav2vec2-base/resolve/main/pytorch_model.bin "HTTP/1.1 302 Found"
+2026-05-29 01:48:55,897 - INFO - HTTP Request: GET https://huggingface.co/api/models/facebook/wav2vec2-base/xet-read-token/0b5b8e868dd84f03fd87d01f9c4ff0f080fecfe8 "HTTP/1.1 200 OK"
+2026-05-29 02:36:09,228 - INFO - HTTP Request: GET https://huggingface.co/api/models/facebook/wav2vec2-base/xet-read-token/0b5b8e868dd84f03fd87d01f9c4ff0f080fecfe8 "HTTP/1.1 200 OK"
+2026-05-29 02:56:04,956 - INFO - HTTP Request: GET https://huggingface.co/api/models/facebook/wav2vec2-base/xet-read-token/0b5b8e868dd84f03fd87d01f9c4ff0f080fecfe8 "HTTP/1.1 200 OK"
