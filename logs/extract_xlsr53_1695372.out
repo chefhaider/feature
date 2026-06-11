@@ -1,0 +1,183 @@
+### Starting TaskPrologue of job 1695372 on tg074 at Thu Jun 11 07:19:59 PM CEST 2026
+Running on cores 0-1,8-9,16-17,24-25 with governor ondemand
+Thu Jun 11 19:19:59 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.159.04             Driver Version: 580.159.04     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  Tesla V100-PCIE-32GB           On  |   00000000:18:00.0 Off |                    0 |
+| N/A   56C    P0             51W /  250W |       0MiB /  32768MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+### Finished TaskPrologue
+
+Job started at : Thu Jun 11 07:19:59 PM CEST 2026
+Host           : tg074
+SLURM_JOBID    : 1695372
+Model          : facebook/wav2vec2-large-xlsr-53
+Max samples    : 100
+Thu Jun 11 19:20:08 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.159.04             Driver Version: 580.159.04     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  Tesla V100-PCIE-32GB           On  |   00000000:18:00.0 Off |                    0 |
+| N/A   52C    P0             30W /  250W |       0MiB /  32768MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+
+============================================================
+Processing: en_us
+============================================================
+
+Sample structure:
+  ID: 903
+  Language: en_us
+  Transcription: a tornado is a spinning column of very low-pressur...
+  Audio length: 6.80s
+  Number of layers: 25
+  Layer shapes:
+    Layer 0: (1, 339, 1024)
+    Layer 1: (1, 339, 1024)
+    Layer 2: (1, 339, 1024)
+    Layer 3: (1, 339, 1024)
+    Layer 4: (1, 339, 1024)
+    Layer 5: (1, 339, 1024)
+    Layer 6: (1, 339, 1024)
+    Layer 7: (1, 339, 1024)
+    Layer 8: (1, 339, 1024)
+    Layer 9: (1, 339, 1024)
+    Layer 10: (1, 339, 1024)
+    Layer 11: (1, 339, 1024)
+    Layer 12: (1, 339, 1024)
+    Layer 13: (1, 339, 1024)
+    Layer 14: (1, 339, 1024)
+    Layer 15: (1, 339, 1024)
+    Layer 16: (1, 339, 1024)
+    Layer 17: (1, 339, 1024)
+    Layer 18: (1, 339, 1024)
+    Layer 19: (1, 339, 1024)
+    Layer 20: (1, 339, 1024)
+    Layer 21: (1, 339, 1024)
+    Layer 22: (1, 339, 1024)
+    Layer 23: (1, 339, 1024)
+    Layer 24: (1, 339, 1024)
+
+============================================================
+Processing: de_de
+============================================================
+
+Sample structure:
+  ID: 1436
+  Language: de_de
+  Transcription: kasinos bemühen sich in der regel sehr darum gäste...
+  Audio length: 16.14s
+  Number of layers: 25
+  Layer shapes:
+    Layer 0: (1, 806, 1024)
+    Layer 1: (1, 806, 1024)
+    Layer 2: (1, 806, 1024)
+    Layer 3: (1, 806, 1024)
+    Layer 4: (1, 806, 1024)
+    Layer 5: (1, 806, 1024)
+    Layer 6: (1, 806, 1024)
+    Layer 7: (1, 806, 1024)
+    Layer 8: (1, 806, 1024)
+    Layer 9: (1, 806, 1024)
+    Layer 10: (1, 806, 1024)
+    Layer 11: (1, 806, 1024)
+    Layer 12: (1, 806, 1024)
+    Layer 13: (1, 806, 1024)
+    Layer 14: (1, 806, 1024)
+    Layer 15: (1, 806, 1024)
+    Layer 16: (1, 806, 1024)
+    Layer 17: (1, 806, 1024)
+    Layer 18: (1, 806, 1024)
+    Layer 19: (1, 806, 1024)
+    Layer 20: (1, 806, 1024)
+    Layer 21: (1, 806, 1024)
+    Layer 22: (1, 806, 1024)
+    Layer 23: (1, 806, 1024)
+    Layer 24: (1, 806, 1024)
+
+============================================================
+Processing: es_419
+============================================================
+
+Sample structure:
+  ID: 844
+  Language: es_419
+  Transcription: los murales o garabatos indeseados reciben el nomb...
+  Audio length: 5.76s
+  Number of layers: 25
+  Layer shapes:
+    Layer 0: (1, 287, 1024)
+    Layer 1: (1, 287, 1024)
+    Layer 2: (1, 287, 1024)
+    Layer 3: (1, 287, 1024)
+    Layer 4: (1, 287, 1024)
+    Layer 5: (1, 287, 1024)
+    Layer 6: (1, 287, 1024)
+    Layer 7: (1, 287, 1024)
+    Layer 8: (1, 287, 1024)
+    Layer 9: (1, 287, 1024)
+    Layer 10: (1, 287, 1024)
+    Layer 11: (1, 287, 1024)
+    Layer 12: (1, 287, 1024)
+    Layer 13: (1, 287, 1024)
+    Layer 14: (1, 287, 1024)
+    Layer 15: (1, 287, 1024)
+    Layer 16: (1, 287, 1024)
+    Layer 17: (1, 287, 1024)
+    Layer 18: (1, 287, 1024)
+    Layer 19: (1, 287, 1024)
+    Layer 20: (1, 287, 1024)
+    Layer 21: (1, 287, 1024)
+    Layer 22: (1, 287, 1024)
+    Layer 23: (1, 287, 1024)
+    Layer 24: (1, 287, 1024)
+Job finished at: Thu Jun 11 07:30:06 PM CEST 2026
+=== JOB_STATISTICS ===
+=== current date     : Thu Jun 11 07:30:06 PM CEST 2026
+= Job-ID             : 1695372 on tinygpu
+= Job-Name           : extract_xlsr53
+= Job-Command        : /home/woody/vlbi/vlbi108v/BIMAP-FEATURE/slurm/extract_xlsr53.sh
+= Initial workdir    : /home/woody/vlbi/vlbi108v/BIMAP-FEATURE
+= Queue/Partition    : v100
+= Slurm account      : vlbi with QOS=normal
+= Requested resources:  for 04:00:00
+= Elapsed runtime    : 00:10:07
+= Total RAM usage    : 20.7 GiB of requested  GiB (%)   
+= Node list          : tg074
+= Subm/Elig/Start/End: 2026-06-11T19:18:16 / 2026-06-11T19:18:16 / 2026-06-11T19:19:59 / 2026-06-11T19:30:06
+======================
+=== Quota infos ======
+    Path                 Used     SoftQ    HardQ    Gracetime  Filec    FileQ    FiHaQ    FileGrace    
+    /home/hpc              22.9G   104.9G   209.7G        N/A     110K     500K   1,000K        N/A    
+    /home/woody            64.3G  1000.0G  1500.0G        N/A     349    5,000K   7,500K        N/A    
+======================
+=== GPU utilization ==
+gpu_name, gpu_bus_id, pid, gpu_utilization [%], mem_utilization [%], max_memory_usage [MiB], time [ms]
+Tesla V100-PCIE-32GB, 00000000:18:00.0, 495757, 3 %, 0 %, 4266 MiB, 554610 ms
