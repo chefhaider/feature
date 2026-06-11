@@ -45,7 +45,7 @@ export TRANSFORMERS_CACHE=$WORK/.cache/huggingface/transformers
 OUTPUT_DIR=/home/woody/vlbi/vlbi108v/BIMAP-FEATURE/embeddings
 
 
-python scripts/extract_features.py \
+python src/extract_features.py \
     --model facebook/wav2vec2-base \
     --languages en_us de_de es_419 \
     --max-samples 100 \
