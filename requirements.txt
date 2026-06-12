@@ -17,7 +17,12 @@ soundfile
 pydub
 
 
+# Phonological features (real G2P + distinctive features)
+gruut[de,es]      # text -> IPA; pure-Python G2P (no system binary needed)
+panphon           # IPA -> articulatory distinctive features
+
 # Forced Alignment & Utilities
+torchaudio        # MMS forced aligner (src/align.py)
 tqdm
 
 # Visualization for Layer-wise Profiles

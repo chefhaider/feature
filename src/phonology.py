@@ -4,7 +4,7 @@ Phonological feature extraction.
 Replaces the grapheme-based pseudo-G2P (which mapped letters straight to features
 and is invalid across languages) with a proper, language-independent pipeline:
 
-    transcription --(phonemizer / espeak-ng)--> IPA phonemes
+    transcription --(gruut, pure-Python G2P)--> IPA phonemes
     IPA phoneme   --(panphon distinctive features)--> compact phonological labels
 
 We extract four label sets, chosen to match the project hypotheses and to be
@@ -25,20 +25,20 @@ These functions return ONE label set per phoneme. To actually probe them you mus
 pair each phoneme with the wav2vec2 frame(s) it occupies (see src/align.py).
 
 Dependencies (install into the `feature` conda env and run on the cluster):
-    pip install phonemizer panphon
-    # phonemizer needs the espeak-ng binary, e.g.:
-    #   conda install -c conda-forge espeak-ng
+    pip install "gruut[de,es]" panphon
+    # gruut is pure-Python (no system binary); the [de,es] extra adds the German
+    # and Spanish data (English ships by default).
 """
 from __future__ import annotations
 
 from functools import lru_cache
 from typing import Dict, List, Optional
 
-# FLEURS language code -> espeak-ng / phonemizer voice
+# FLEURS language code -> gruut language
 LANG_CODE: Dict[str, str] = {
     "en_us": "en-us",
-    "de_de": "de",
-    "es_419": "es-419",
+    "de_de": "de-de",
+    "es_419": "es-es",
 }
 
 FEATURES = ["voicing", "nasal", "manner", "place"]
@@ -56,18 +56,16 @@ SEGMENT_FILTERS = {
 # text -> IPA
 # --------------------------------------------------------------------------- #
 def text_to_ipa(text: str, lang: str) -> str:
-    """Phonemize text into an IPA string for the given FLEURS language code."""
-    from phonemizer import phonemize
+    """Phonemize text into an IPA string using gruut (pure-Python, no system deps)."""
+    from gruut import sentences
 
     code = LANG_CODE.get(lang, lang)
-    return phonemize(
-        text,
-        language=code,
-        backend="espeak",
-        strip=True,
-        preserve_punctuation=False,
-        with_stress=False,
-    )
+    phones: List[str] = []
+    for sent in sentences(text, lang=code):
+        for word in sent:
+            if word.phonemes:
+                phones.extend(word.phonemes)
+    return "".join(phones)
 
 
 # --------------------------------------------------------------------------- #
