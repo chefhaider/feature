@@ -1,7 +1,7 @@
 #!/bin/bash -l
 #SBATCH --job-name=extract_xlsr53
-#SBATCH --output=/home/woody/vlbi/vlbi108v/BIMAP-FEATURE/logs/%x_%j.out
-#SBATCH --error=/home/woody/vlbi/vlbi108v/BIMAP-FEATURE/logs/%x_%j.err
+#SBATCH --output=/home/woody/vlbi/vlbi108v/BIMAP-FEATURE/slurm/logs/%x_%j.out
+#SBATCH --error=/home/woody/vlbi/vlbi108v/BIMAP-FEATURE/slurm/logs/%x_%j.err
 #SBATCH --partition=v100
 #SBATCH --gres=gpu:v100:1
 #SBATCH --time=04:00:00

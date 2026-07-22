@@ -1,0 +1,140 @@
+### Starting TaskPrologue of job 1756924 on tg071 at Tue Jul 21 10:06:06 PM CEST 2026
+Running on cores 2-3,10-11,16,19,26-27 with governor ondemand
+Tue Jul 21 22:06:06 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.173.02             Driver Version: 580.173.02     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  Tesla V100-PCIE-32GB           On  |   00000000:3B:00.0 Off |                    0 |
+| N/A   31C    P0             26W /  250W |       0MiB /  32768MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+### Finished TaskPrologue
+
+Job started at : Tue Jul 21 10:06:06 PM CEST 2026
+Host           : tg071
+SLURM_JOBID    : 1756924
+MODEL          : base
+N_PROBE        : 100
+ALIGNMENT      : forced
+LAYER_STRIDE   : 2
+N_REPEATS      : 5
+PARTS_DIR      : probing_results_forced/_parts
+Models      : ['base']
+N_PROBE     : 100
+Alignment   : forced
+Repeats     : 5   Layer stride: 2
+Output      : /home/woody/vlbi/vlbi108v/BIMAP-FEATURE/probing_results_forced/_parts/base
+Loaded alignment cache: 300 entries from artifacts/alignment_cache.pkl
+
+== base ==
+   13 layers, probing 7: [0, 2, 4, 6, 8, 10, 12]
+   layer 0 done
+   layer 2 done
+   layer 4 done
+   layer 6 done
+   layer 8 done
+   layer 10 done
+   layer 12 done
+
+layer_df: (84, 15) | xling_df: (168, 16)
+Saved probing_results_forced/_parts/base/fig_h2_layers.png
+Saved probing_results_forced/_parts/base/fig_h1_models.png
+Saved probing_results_forced/_parts/base/fig_h1_transfer_by_layer.png
+Saved probing_results_forced/_parts/base/fig_h3_transfer_gap.png
+Saved probing_results_forced/_parts/base/fig_language_matrix.png
+
+RESULTS SUMMARY
+======================================================================
+
+Probes use GROUPED splits (by utterance); all metrics are mean over repeated splits / bootstraps, with _std available in the CSVs.
+
+H2 — within-language macro-F1 by model x layer (mean over languages & features):
+feature      manner  nasal  place  voicing
+model layer                               
+base  0       0.556  0.709  0.616    0.781
+      2       0.614  0.740  0.693    0.789
+      4       0.653  0.751  0.748    0.816
+      6       0.666  0.752  0.765    0.833
+      8       0.668  0.753  0.761    0.838
+      10      0.664  0.755  0.753    0.848
+      12      0.583  0.686  0.674    0.790
+
+Best layer per model x feature (by within-language macro-F1):
+      manner  nasal  place  voicing
+base       8     10      6       10
+
+H1 — cross-lingual transfer (all pairs) at best layer, by model:
+model     base
+feature       
+manner   0.452
+nasal    0.720
+place    0.628
+voicing  0.667
+
+H1 — bootstrap sd of those values:
+model     base
+feature       
+manner   0.039
+nasal    0.051
+place    0.049
+voicing  0.037
+
+H1 — majority baseline (macro-F1):
+model     base
+feature       
+manner   0.091
+nasal    0.469
+place    0.263
+voicing  0.382
+
+H3 — transfer gap per feature, PER MODEL (not aggregated):
+model feature  best_layer  within_lang  cross_lang  transfer_gap
+ base  manner           8        0.668       0.452         0.215
+ base voicing          10        0.848       0.667         0.182
+ base   place           6        0.765       0.628         0.136
+ base   nasal          10        0.755       0.720         0.035
+
+All-pairs transfer matrix — base (rows=train, cols=test):
+        en_us  de_de  es_419
+en_us   0.835  0.661   0.651
+de_de   0.629  0.754   0.565
+es_419  0.583  0.611   0.687
+
+
+Saved CSVs + summary to probing_results_forced/_parts/base/
+
+Total time: 152.9 min
+Job finished at: Wed Jul 22 12:39:50 AM CEST 2026
+=== JOB_STATISTICS ===
+=== current date     : Wed Jul 22 12:39:50 AM CEST 2026
+= Job-ID             : 1756924 on tinygpu
+= Job-Name           : probing_worker
+= Job-Command        : /home/woody/vlbi/vlbi108v/BIMAP-FEATURE/slurm/probing_worker.sh
+= Initial workdir    : /home/woody/vlbi/vlbi108v/BIMAP-FEATURE
+= Queue/Partition    : v100
+= Slurm account      : vlbi with QOS=normal
+= Requested resources:  for 12:00:00
+= Elapsed runtime    : 02:33:44
+= Total RAM usage    : 13.0 GiB of requested  GiB (%)   
+= Node list          : tg071
+= Subm/Elig/Start/End: 2026-07-21T22:06:05 / 2026-07-21T22:06:05 / 2026-07-21T22:06:06 / 2026-07-22T00:39:50
+======================
+=== Quota infos ======
+    Path                 Used     SoftQ    HardQ    Gracetime  Filec    FileQ    FiHaQ    FileGrace    
+    /home/hpc              62.7G   104.9G   209.7G        N/A     120K     500K   1,000K        N/A    
+    /home/woody            67.0G  1000.0G  1500.0G        N/A   1,153    5,000K   7,500K        N/A    
+======================
+=== GPU utilization ==
+gpu_name, gpu_bus_id, pid, gpu_utilization [%], mem_utilization [%], max_memory_usage [MiB], time [ms]

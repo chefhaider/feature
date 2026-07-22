@@ -1,0 +1,167 @@
+### Starting TaskPrologue of job 1756927 on tg071 at Wed Jul 22 03:31:15 AM CEST 2026
+Running on cores 2-3,10-11,16,19,26-27 with governor ondemand
+Wed Jul 22 03:31:15 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.173.02             Driver Version: 580.173.02     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  Tesla V100-PCIE-32GB           On  |   00000000:3B:00.0 Off |                    0 |
+| N/A   33C    P0             26W /  250W |       0MiB /  32768MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+### Finished TaskPrologue
+
+Job started at : Wed Jul 22 03:31:15 AM CEST 2026
+SLURM_JOBID    : 1756927
+PARTS_DIR      : probing_results_forced/_parts
+OUT_DIR        : probing_results_forced
+Merged models: ['base', 'xlsr53', 'xlsr300m']
+layer_df: (396, 15)   xling_df: (792, 16)
+Saved probing_results_forced/fig_h2_layers.png
+Saved probing_results_forced/fig_h1_models.png
+Saved probing_results_forced/fig_h1_transfer_by_layer.png
+Saved probing_results_forced/fig_h3_transfer_gap.png
+Saved probing_results_forced/fig_language_matrix.png
+
+RESULTS SUMMARY
+======================================================================
+
+Probes use GROUPED splits (by utterance); all metrics are mean over repeated splits / bootstraps, with _std available in the CSVs.
+
+H2 — within-language macro-F1 by model x layer (mean over languages & features):
+feature         manner  nasal  place  voicing
+model    layer                               
+base     0       0.556  0.709  0.616    0.781
+         2       0.614  0.740  0.693    0.789
+         4       0.653  0.751  0.748    0.816
+         6       0.666  0.752  0.765    0.833
+         8       0.668  0.753  0.761    0.838
+         10      0.664  0.755  0.753    0.848
+         12      0.583  0.686  0.674    0.790
+xlsr300m 0       0.554  0.709  0.609    0.782
+         2       0.581  0.714  0.633    0.766
+         4       0.623  0.731  0.712    0.795
+         6       0.668  0.738  0.752    0.815
+         8       0.690  0.759  0.782    0.830
+         10      0.710  0.766  0.786    0.839
+         12      0.701  0.766  0.790    0.833
+         14      0.712  0.773  0.794    0.848
+         16      0.747  0.800  0.814    0.879
+         18      0.734  0.783  0.814    0.880
+         20      0.689  0.769  0.784    0.859
+         22      0.676  0.772  0.767    0.847
+         24      0.664  0.759  0.759    0.837
+xlsr53   0       0.553  0.709  0.603    0.780
+         2       0.581  0.724  0.646    0.773
+         4       0.640  0.732  0.724    0.800
+         6       0.687  0.741  0.763    0.819
+         8       0.698  0.758  0.780    0.835
+         10      0.722  0.767  0.788    0.841
+         12      0.700  0.766  0.787    0.843
+         14      0.729  0.777  0.798    0.863
+         16      0.747  0.795  0.821    0.878
+         18      0.722  0.779  0.798    0.869
+         20      0.691  0.762  0.774    0.844
+         22      0.691  0.780  0.782    0.858
+         24      0.696  0.783  0.779    0.854
+
+Best layer per model x feature (by within-language macro-F1):
+          manner  nasal  place  voicing
+base           8     10      6       10
+xlsr300m      16     16     18       18
+xlsr53        16     16     16       16
+
+H1 — cross-lingual transfer (all pairs) at best layer, by model:
+model     base  xlsr300m  xlsr53
+feature                         
+manner   0.452     0.533   0.513
+nasal    0.720     0.728   0.760
+place    0.628     0.658   0.660
+voicing  0.667     0.753   0.721
+
+H1 — bootstrap sd of those values:
+model     base  xlsr300m  xlsr53
+feature                         
+manner   0.039     0.045   0.037
+nasal    0.051     0.050   0.016
+place    0.049     0.054   0.037
+voicing  0.037     0.039   0.052
+
+H1 — majority baseline (macro-F1):
+model     base  xlsr300m  xlsr53
+feature                         
+manner   0.091     0.091   0.091
+nasal    0.469     0.469   0.469
+place    0.263     0.263   0.263
+voicing  0.382     0.382   0.382
+
+H3 — transfer gap per feature, PER MODEL (not aggregated):
+   model feature  best_layer  within_lang  cross_lang  transfer_gap
+    base  manner           8        0.668       0.452         0.215
+    base voicing          10        0.848       0.667         0.182
+    base   place           6        0.765       0.628         0.136
+    base   nasal          10        0.755       0.720         0.035
+xlsr300m  manner          16        0.747       0.533         0.214
+xlsr300m   place          18        0.814       0.658         0.156
+xlsr300m voicing          18        0.880       0.753         0.127
+xlsr300m   nasal          16        0.800       0.728         0.072
+  xlsr53  manner          16        0.747       0.513         0.235
+  xlsr53   place          16        0.821       0.660         0.160
+  xlsr53 voicing          16        0.878       0.721         0.156
+  xlsr53   nasal          16        0.795       0.760         0.035
+
+All-pairs transfer matrix — base (rows=train, cols=test):
+        en_us  de_de  es_419
+en_us   0.835  0.661   0.651
+de_de   0.629  0.754   0.565
+es_419  0.583  0.611   0.687
+
+All-pairs transfer matrix — xlsr300m (rows=train, cols=test):
+        en_us  de_de  es_419
+en_us   0.873  0.693   0.684
+de_de   0.679  0.808   0.604
+es_419  0.693  0.653   0.749
+
+All-pairs transfer matrix — xlsr53 (rows=train, cols=test):
+        en_us  de_de  es_419
+en_us   0.878  0.703   0.670
+de_de   0.678  0.806   0.637
+es_419  0.659  0.634   0.746
+
+
+Saved CSVs + summary to probing_results_forced/
+
+Merged results written to /home/woody/vlbi/vlbi108v/BIMAP-FEATURE/probing_results_forced
+Job finished at: Wed Jul 22 03:32:01 AM CEST 2026
+=== JOB_STATISTICS ===
+=== current date     : Wed Jul 22 03:32:01 AM CEST 2026
+= Job-ID             : 1756927 on tinygpu
+= Job-Name           : probing_merge
+= Job-Command        : /home/woody/vlbi/vlbi108v/BIMAP-FEATURE/slurm/probing_merge.sh
+= Initial workdir    : /home/woody/vlbi/vlbi108v/BIMAP-FEATURE
+= Queue/Partition    : v100
+= Slurm account      : vlbi with QOS=normal
+= Requested resources:  for 00:20:00
+= Elapsed runtime    : 00:00:46
+= Total RAM usage    : 0.2 GiB of requested  GiB (%)   
+= Node list          : tg071
+= Subm/Elig/Start/End: 2026-07-21T22:06:05 / 2026-07-22T03:31:15 / 2026-07-22T03:31:15 / 2026-07-22T03:32:01
+======================
+=== Quota infos ======
+    Path                 Used     SoftQ    HardQ    Gracetime  Filec    FileQ    FiHaQ    FileGrace    
+    /home/hpc              62.7G   104.9G   209.7G        N/A     120K     500K   1,000K        N/A    
+    /home/woody            67.0G  1000.0G  1500.0G        N/A   1,182    5,000K   7,500K        N/A    
+======================
+=== GPU utilization ==
+gpu_name, gpu_bus_id, pid, gpu_utilization [%], mem_utilization [%], max_memory_usage [MiB], time [ms]

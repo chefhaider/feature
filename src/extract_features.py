@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """
 Extract Wav2Vec2 embeddings from FLEURS dataset.
-Usage: python extract_embeddings.py --languages en_us de_de es_419 --max-samples 100
+Usage: python extract_features.py --languages en_us de_de es_419 --max-samples 100
 """
 
 import torch
 import numpy as np
+import librosa
 from datasets import load_dataset
 from transformers import Wav2Vec2Model, Wav2Vec2FeatureExtractor
 from tqdm import tqdm
@@ -13,12 +14,15 @@ import pickle
 import os
 import argparse
 import logging
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
+
+# wav2vec2 models are trained on 16 kHz audio and do NOT resample internally.
+TARGET_SR = 16000
 
 # Setup logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s' 
+    format='%(asctime)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
@@ -74,12 +78,13 @@ def parse_args():
     )
     
     parser.add_argument(
-        "--batch-size",
-        type=int,
-        default=1,
-        help="Batch size for processing (currently only supports 1)"
+        "--dtype",
+        type=str,
+        default="float32",
+        choices=["float32", "float16"],
+        help="Precision for stored hidden states (float16 halves file size)"
     )
-    
+
     parser.add_argument(
         "--trust-remote-code",
         action="store_true",
@@ -125,7 +130,8 @@ def extract_representations(
     sampling_rate: int,
     feature_extractor,
     model,
-    device: str
+    device: str,
+    store_dtype: str = "float32",
 ) -> List[np.ndarray]:
     """Extract hidden states from audio."""
     inputs = feature_extractor(
@@ -136,15 +142,18 @@ def extract_representations(
     )
     inputs = {k: v.to(device) for k, v in inputs.items()}
 
-    with torch.no_grad():
-        outputs = model(
-            inputs["input_values"],
-            output_hidden_states=True
-        )
+    # Pass attention_mask when the feature extractor provides one (the large
+    # XLSR/XLS-R models do); required for correctness once batch size > 1.
+    model_inputs = {"input_values": inputs["input_values"]}
+    if "attention_mask" in inputs:
+        model_inputs["attention_mask"] = inputs["attention_mask"]
 
-    # Convert to numpy and move to CPU
-    hidden_states = [h.cpu().numpy() for h in outputs.hidden_states]
-    
+    with torch.no_grad():
+        outputs = model(**model_inputs, output_hidden_states=True)
+
+    # Convert to numpy and move to CPU (optionally down-casting to save space)
+    hidden_states = [h.cpu().numpy().astype(store_dtype) for h in outputs.hidden_states]
+
     return hidden_states
 
 
@@ -178,15 +187,26 @@ def process_language(
         
         for idx, sample in enumerate(tqdm(dataset, desc=f"Processing {lang}")):
             try:
-                audio = sample['audio']['array']
+                audio = np.asarray(sample['audio']['array'], dtype=np.float32)
                 sampling_rate = sample['audio']['sampling_rate']
-                
+
+                # wav2vec2 assumes 16 kHz and does not resample internally.
+                # FLEURS is already 16 kHz; this guard keeps other datasets correct.
+                if sampling_rate != TARGET_SR:
+                    audio = librosa.resample(
+                        audio, orig_sr=sampling_rate, target_sr=TARGET_SR
+                    )
+                    sampling_rate = TARGET_SR
+
                 # Extract features
                 hidden_states = extract_representations(
-                    audio, sampling_rate, feature_extractor, model, device
+                    audio, sampling_rate, feature_extractor, model, device,
+                    store_dtype=args.dtype,
                 )
-                
+
                 feature_dict = {
+                    # NOTE: FLEURS 'id' is the FLORES *sentence* id, not unique per
+                    # recording — the same sentence can appear for multiple speakers.
                     'id': sample.get('id', idx),
                     'language': lang,
                     'transcription': sample.get('transcription', ''),

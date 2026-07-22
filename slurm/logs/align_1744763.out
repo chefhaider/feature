@@ -1,0 +1,114 @@
+### Starting TaskPrologue of job 1744763 on tg074 at Tue Jul 14 02:08:11 AM CEST 2026
+Running on cores 0-1,8-9,16-17,24-25 with governor ondemand
+Tue Jul 14 02:08:11 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.173.02             Driver Version: 580.173.02     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  Tesla V100-PCIE-32GB           On  |   00000000:18:00.0 Off |                    0 |
+| N/A   40C    P0             28W /  250W |       0MiB /  32768MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+### Finished TaskPrologue
+
+Job started at : Tue Jul 14 02:08:12 AM CEST 2026
+Host           : tg074
+SLURM_JOBID    : 1744763
+Max samples    : 100
+Tue Jul 14 02:08:27 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.173.02             Driver Version: 580.173.02     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  Tesla V100-PCIE-32GB           On  |   00000000:18:00.0 Off |                    0 |
+| N/A   40C    P0             27W /  250W |       0MiB /  32768MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+Device: cuda
+Loading MMS aligner (~1.18 GB first time)...
+
+=== en_us ===
+  [10/100] 26s
+  [20/100] 34s
+  [30/100] 42s
+  [40/100] 49s
+  [50/100] 57s
+  [60/100] 63s
+  [70/100] 71s
+  [80/100] 77s
+  [90/100] 83s
+  [100/100] 89s
+  saved (100 total spans) -> artifacts/alignment_cache.pkl
+
+=== de_de ===
+  [10/100] 288s
+  [20/100] 544s
+  [30/100] 1068s
+  [40/100] 1518s
+  [50/100] 1830s
+  [60/100] 2191s
+  [70/100] 2402s
+  [80/100] 2695s
+  [90/100] 2937s
+  [100/100] 3187s
+  saved (200 total spans) -> artifacts/alignment_cache.pkl
+
+=== es_419 ===
+  [10/100] 409s
+  [20/100] 768s
+  [30/100] 1052s
+  [40/100] 1291s
+  [50/100] 1651s
+  [60/100] 1918s
+  [70/100] 2156s
+  [80/100] 2330s
+  [90/100] 2546s
+  [100/100] 2783s
+  saved (300 total spans) -> artifacts/alignment_cache.pkl
+
+Done. 300 alignment entries in artifacts/alignment_cache.pkl
+Job finished at: Tue Jul 14 03:54:29 AM CEST 2026
+=== JOB_STATISTICS ===
+=== current date     : Tue Jul 14 03:54:29 AM CEST 2026
+= Job-ID             : 1744763 on tinygpu
+= Job-Name           : align
+= Job-Command        : /home/woody/vlbi/vlbi108v/BIMAP-FEATURE/slurm/align.sh
+= Initial workdir    : /home/woody/vlbi/vlbi108v/BIMAP-FEATURE
+= Queue/Partition    : v100
+= Slurm account      : vlbi with QOS=normal
+= Requested resources:  for 04:00:00
+= Elapsed runtime    : 01:46:19
+= Total RAM usage    : 2.8 GiB of requested  GiB (%)   
+= Node list          : tg074
+= Subm/Elig/Start/End: 2026-07-14T02:08:10 / 2026-07-14T02:08:10 / 2026-07-14T02:08:10 / 2026-07-14T03:54:29
+======================
+=== Quota infos ======
+    Path                 Used     SoftQ    HardQ    Gracetime  Filec    FileQ    FiHaQ    FileGrace    
+    /home/hpc              62.9G   104.9G   209.7G        N/A     120K     500K   1,000K        N/A    
+    /home/woody            67.0G  1000.0G  1500.0G        N/A   1,116    5,000K   7,500K        N/A    
+======================
+=== GPU utilization ==
+gpu_name, gpu_bus_id, pid, gpu_utilization [%], mem_utilization [%], max_memory_usage [MiB], time [ms]
+Tesla V100-PCIE-32GB, 00000000:18:00.0, 57086, 0 %, 0 %, 4264 MiB, 6318204 ms

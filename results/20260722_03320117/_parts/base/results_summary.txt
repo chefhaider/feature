@@ -1,0 +1,56 @@
+RESULTS SUMMARY
+======================================================================
+
+Probes use GROUPED splits (by utterance); all metrics are mean over repeated splits / bootstraps, with _std available in the CSVs.
+
+H2 — within-language macro-F1 by model x layer (mean over languages & features):
+feature      manner  nasal  place  voicing
+model layer                               
+base  0       0.556  0.709  0.616    0.781
+      2       0.614  0.740  0.693    0.789
+      4       0.653  0.751  0.748    0.816
+      6       0.666  0.752  0.765    0.833
+      8       0.668  0.753  0.761    0.838
+      10      0.664  0.755  0.753    0.848
+      12      0.583  0.686  0.674    0.790
+
+Best layer per model x feature (by within-language macro-F1):
+      manner  nasal  place  voicing
+base       8     10      6       10
+
+H1 — cross-lingual transfer (all pairs) at best layer, by model:
+model     base
+feature       
+manner   0.452
+nasal    0.720
+place    0.628
+voicing  0.667
+
+H1 — bootstrap sd of those values:
+model     base
+feature       
+manner   0.039
+nasal    0.051
+place    0.049
+voicing  0.037
+
+H1 — majority baseline (macro-F1):
+model     base
+feature       
+manner   0.091
+nasal    0.469
+place    0.263
+voicing  0.382
+
+H3 — transfer gap per feature, PER MODEL (not aggregated):
+model feature  best_layer  within_lang  cross_lang  transfer_gap
+ base  manner           8        0.668       0.452         0.215
+ base voicing          10        0.848       0.667         0.182
+ base   place           6        0.765       0.628         0.136
+ base   nasal          10        0.755       0.720         0.035
+
+All-pairs transfer matrix — base (rows=train, cols=test):
+        en_us  de_de  es_419
+en_us   0.835  0.661   0.651
+de_de   0.629  0.754   0.565
+es_419  0.583  0.611   0.687

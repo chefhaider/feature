@@ -1,7 +1,7 @@
 #!/bin/bash -l
 #SBATCH --job-name=extract_base_alex
-#SBATCH --output=/home/woody/vlbi/vlbi108v/BIMAP-FEATURE/logs/%x_%j.out
-#SBATCH --error=/home/woody/vlbi/vlbi108v/BIMAP-FEATURE/logs/%x_%j.err
+#SBATCH --output=/home/woody/vlbi/vlbi108v/BIMAP-FEATURE/slurm/logs/%x_%j.out
+#SBATCH --error=/home/woody/vlbi/vlbi108v/BIMAP-FEATURE/slurm/logs/%x_%j.err
 #SBATCH --gres=gpu:a40:1
 # NOTE: on Alex you do NOT set --partition; it is selected automatically from --gres.
 #SBATCH --time=01:00:00

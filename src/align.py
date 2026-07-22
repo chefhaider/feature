@@ -17,6 +17,7 @@ NOTE: the MMS calls in get_aligner()/align_words() follow the torchaudio
 cluster (torchaudio version, dictionary coverage for de/es diacritics).
 """
 import re
+import unicodedata
 
 import numpy as np
 import torch
@@ -34,32 +35,51 @@ def get_aligner(device="cpu"):
     return model, tokenizer, aligner
 
 
-def _normalize(text):
-    """Lowercase and keep letters/spaces -- MMS expects clean word tokens."""
-    text = text.lower()
-    text = re.sub(r"[^a-zäöüßàáéíóúñ ]", " ", text)
+# Latin + Latin-Extended letters (keeps diacritics for gruut; romanized later).
+_WORD_RE = re.compile(r"[^a-zÀ-ɏ ]")
+
+
+def _words(text):
+    """Lowercase and split into word tokens, KEEPING diacritics (gruut needs the
+    original spelling to phonemize German/Spanish correctly)."""
+    text = _WORD_RE.sub(" ", text.lower())
     return text.split()
+
+
+def _romanize(word):
+    """ASCII a-z romanization for the MMS tokenizer, whose dictionary is a-z only.
+    German 'ß' -> 'ss'; other diacritics are stripped via NFKD (ü->u, ñ->n, á->a)."""
+    word = word.replace("ß", "ss")
+    word = unicodedata.normalize("NFKD", word)
+    word = "".join(c for c in word if not unicodedata.combining(c))
+    return re.sub(r"[^a-z]", "", word)
 
 
 def align_words(waveform, sample_rate, transcript, aligner_bundle, device="cpu"):
     """Return [(word, start_s, end_s), ...] for one utterance.
 
+    `word` is the ORIGINAL (diacritic-preserving) token, so downstream
+    phonemization is correct; MMS itself is fed an a-z romanization.
+
     waveform: 1-D float tensor/array of audio at `sample_rate`.
     """
     model, tokenizer, aligner = aligner_bundle
-    words = _normalize(transcript)
-    if not words:
+    words = _words(transcript)
+    # Pair each original word with its romanization; drop any that romanize to "".
+    pairs = [(w, r) for w in words for r in (_romanize(w),) if r]
+    if not pairs:
         return []
+    orig_words, roman_words = zip(*pairs)
 
     wav = torch.as_tensor(waveform, dtype=torch.float32).reshape(1, -1).to(device)
     with torch.inference_mode():
         emission, _ = model(wav)
-        token_spans = aligner(emission[0], tokenizer(words))
+        token_spans = aligner(emission[0], tokenizer(list(roman_words)))
 
     num_frames = emission.size(1)
     ratio = wav.size(1) / num_frames / sample_rate  # seconds per emission frame
     out = []
-    for spans, word in zip(token_spans, words):
+    for spans, word in zip(token_spans, orig_words):
         out.append((word, spans[0].start * ratio, spans[-1].end * ratio))
     return out
 
