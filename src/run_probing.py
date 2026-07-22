@@ -3,13 +3,19 @@
 Segment-level phonological probing — batch version of notebook/segment_probing copy.ipynb.
 
 Pipeline:
-  - load extracted wav2vec2 embeddings (embeddings/<tag>/<lang>_features.pkl)
-  - attach phoneme labels to frames (uniform split, or MMS forced alignment)
+  - load extracted wav2vec2 embeddings (artifacts/embeddings/<tag>/<lang>_features.pkl)
+  - attach phoneme labels to their real frames via MMS forced alignment
   - train linear probes across model x feature x LAYER x language
   - train ALL-PAIRS cross-lingual probes (every train->test language pair)
   - write H1/H2/H3 tables (CSV), figures (PNG), and a text summary.
 
 Methodology notes:
+  * Frame->phoneme mapping uses FORCED ALIGNMENT (artifacts/alignment_cache.pkl,
+    built by src/precompute_alignments.py). The earlier "uniform" mode -- which
+    split each utterance's frames evenly across its phonemes -- was removed: it
+    ignored leading silence and real phoneme durations, roughly halving probe
+    scores (voicing EN 0.50 uniform vs 0.86 forced). The uniform baseline run is
+    preserved at results/20260706_21094441/ and in git history.
   * Probes use GROUPED train/test splits (by utterance) so phonemes from one
     recording never straddle the split -- a random split inflates scores.
   * Every layer is probed (not a sample of 5), so H2 gets a real curve.
@@ -20,8 +26,8 @@ Methodology notes:
 CPU-only: no GPU needed.
 
 Usage:
-    python src/run_probing.py --alignment forced
-    python src/run_probing.py --alignment uniform --n-probe 60
+    python src/run_probing.py
+    python src/run_probing.py --n-probe 60
     python src/run_probing.py --layer-stride 2      # faster: every other layer
 """
 import argparse
@@ -42,16 +48,16 @@ ROOT = Path(__file__).parent.parent
 os.chdir(ROOT)
 sys.path.insert(0, str(ROOT))
 
-from src.phonology import phonological_features, keep_for, FEATURES
+from src.align import segment_dataset
+from src.phonology import FEATURES
 from src.probing import evaluate_probe, cross_lingual_probe
 
 LANGUAGES = ["en_us", "de_de", "es_419"]
 ALL_MODELS = {
-    "base":     "embeddings/base",
-    "xlsr53":   "embeddings/xlsr53",
-    "xlsr300m": "embeddings/xlsr300m",
+    "base":     "artifacts/embeddings/base",
+    "xlsr53":   "artifacts/embeddings/xlsr53",
+    "xlsr300m": "artifacts/embeddings/xlsr300m",
 }
-PHONEME_CACHE_PATH = "artifacts/phoneme_cache.pkl"
 ALIGN_CACHE_PATH = "artifacts/alignment_cache.pkl"
 
 # Okabe-Ito colorblind-safe hues
@@ -61,17 +67,6 @@ FEATURE_COLORS = {"voicing": "#0072B2", "nasal": "#E69F00",
 
 
 # ── caches ────────────────────────────────────────────────────────────────────
-def load_phoneme_cache():
-    if os.path.exists(PHONEME_CACHE_PATH):
-        with open(PHONEME_CACHE_PATH, "rb") as f:
-            cache = pickle.load(f)
-        print(f"Loaded phoneme cache: {len(cache)} entries from {PHONEME_CACHE_PATH}")
-        return cache
-    print(f"WARNING: {PHONEME_CACHE_PATH} not found — falling back to live gruut (~3s/utt).")
-    print("Run `python src/precompute_phonemes.py` first to avoid this.")
-    return {}
-
-
 def load_align_cache():
     if os.path.exists(ALIGN_CACHE_PATH):
         with open(ALIGN_CACHE_PATH, "rb") as f:
@@ -100,40 +95,14 @@ def utt_gid(lang, s):
     return f"{lang}|{s.get('id')}|{round(float(s.get('audio_length', 0.0)), 2)}"
 
 
-def utt_phonemes(sample, lang, phon_cache):
-    key = (lang, sample.get("id"))
-    if key not in phon_cache:
-        phon_cache[key] = phonological_features(sample.get("transcription", ""), lang)
-    return phon_cache[key]
+def segment_xy(utts_by_lang, layer, feature, align_cache):
+    """Build (X, y, groups) for one layer+feature using MMS forced alignment.
 
-
-def segment_xy(utts_by_lang, layer, feature, phon_cache):
-    """Uniform alignment: split each utterance's frames evenly across its phonemes.
-    Returns (X, y, groups) — groups is the utterance each phoneme came from."""
-    X, y, g = [], [], []
-    for lang, utts in utts_by_lang.items():
-        for s in utts:
-            segs = utt_phonemes(s, lang, phon_cache)
-            if not segs:
-                continue
-            h = s["hidden_states"][layer][0]          # (T, D)
-            T, n = len(h), len(segs)
-            gid = utt_gid(lang, s)
-            for i, seg in enumerate(segs):
-                if not keep_for(feature, seg):
-                    continue
-                f0 = int(i / n * T)
-                f1 = max(f0 + 1, int((i + 1) / n * T))
-                X.append(h[f0:f1].mean(axis=0))
-                y.append(seg[feature])
-                g.append(gid)
-    return np.array(X), np.array(y), np.array(g)
-
-
-def segment_xy_forced(utts_by_lang, layer, feature, align_cache):
-    """Forced alignment: slice each phoneme's REAL frames from the MMS alignment
-    cache. Returns (X, y, groups)."""
-    from src.align import segment_dataset
+    Each phoneme is mean-pooled over the frames it actually occupies (spans from
+    the alignment cache), rather than an even split across the utterance.
+    `groups` is the recording each phoneme came from, so train/test splits can be
+    grouped by utterance.
+    """
     X, y, g = [], [], []
     for lang, utts in utts_by_lang.items():
         for s in utts:
@@ -162,8 +131,8 @@ def safe_evaluate(X, y, groups=None, n_repeats=5):
 
 
 # ── main experiment loop ──────────────────────────────────────────────────────
-def run_probes(models, n_probe, segment, n_repeats=5, layer_stride=1):
-    """`segment(utts_by_lang, layer, feature) -> (X, y, groups)`.
+def run_probes(models, n_probe, align_cache, n_repeats=5, layer_stride=1):
+    """Probe every model x feature x layer x language, plus all-pairs transfer.
 
     Returns (layer_df, xling_df):
       layer_df — within-language score per model x feature x layer x language (H2,
@@ -186,7 +155,7 @@ def run_probes(models, n_probe, segment, n_repeats=5, layer_stride=1):
             def seg(lang, feat, _L=L):
                 k = (lang, feat)
                 if k not in memo:
-                    memo[k] = segment({lang: utts[lang]}, _L, feat)
+                    memo[k] = segment_xy({lang: utts[lang]}, _L, feat, align_cache)
                 return memo[k]
 
             for feat in FEATURES:
@@ -466,9 +435,6 @@ def main():
     ap.add_argument("--models", nargs="+", default=list(ALL_MODELS),
                     choices=list(ALL_MODELS), help="Which model tags to run.")
     ap.add_argument("--output-dir", default="probing_results")
-    ap.add_argument("--alignment", default="uniform", choices=["uniform", "forced"],
-                    help="uniform = even frame split (no audio needed); "
-                         "forced = MMS spans from artifacts/alignment_cache.pkl.")
     ap.add_argument("--n-repeats", type=int, default=5,
                     help="Repeated grouped splits per within-language probe (error bars).")
     ap.add_argument("--layer-stride", type=int, default=1,
@@ -482,23 +448,18 @@ def main():
 
     print(f"Models      : {list(models)}")
     print(f"N_PROBE     : {args.n_probe}")
-    print(f"Alignment   : {args.alignment}")
+    print(f"Alignment   : forced (MMS)")
     print(f"Repeats     : {args.n_repeats}   Layer stride: {args.layer_stride}")
     print(f"Output      : {out_dir.resolve()}")
 
-    if args.alignment == "forced":
-        align_cache = load_align_cache()
-        assert align_cache, (
-            f"{ALIGN_CACHE_PATH} not found. Run `python src/precompute_alignments.py` "
-            "first (needs FLEURS audio + the MMS model)."
-        )
-        segment = lambda u, l, f: segment_xy_forced(u, l, f, align_cache)
-    else:
-        phon_cache = load_phoneme_cache()
-        segment = lambda u, l, f: segment_xy(u, l, f, phon_cache)
+    align_cache = load_align_cache()
+    assert align_cache, (
+        f"{ALIGN_CACHE_PATH} not found. Run `sbatch slurm/align.sh` "
+        "first (needs FLEURS audio + the MMS model)."
+    )
 
     t0 = time.time()
-    layer_df, xling_df = run_probes(models, args.n_probe, segment,
+    layer_df, xling_df = run_probes(models, args.n_probe, align_cache,
                                     n_repeats=args.n_repeats,
                                     layer_stride=args.layer_stride)
     print(f"\nlayer_df: {layer_df.shape} | xling_df: {xling_df.shape}")

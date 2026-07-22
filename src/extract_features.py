@@ -57,7 +57,7 @@ def parse_args():
     parser.add_argument(
         "--output-dir", "-o",
         type=str,
-        default="./embeddings",
+        default="./artifacts/embeddings",
         help="Directory to save extracted features"
     )
     

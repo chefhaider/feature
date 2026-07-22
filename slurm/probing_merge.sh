@@ -9,14 +9,15 @@
 #SBATCH --mail-user=mhaiderzaidi21@fau.de
 
 # Combine the 3 per-model probing_worker.sh outputs into the final figures/CSVs.
-# Submitted with --dependency=afterok:<3 worker job ids> by slurm/probing.sh.
-#   Usage: sbatch slurm/probing_merge.sh ALIGNMENT PARTS_DIR OUT_DIR
+# Submitted with --dependency=afterok:<3 worker job ids> by slurm/pipeline.sh.
+#   Usage: sbatch slurm/probing_merge.sh PARTS_DIR OUT_DIR
 
 set -eo pipefail
 
-ALIGNMENT="${1:-forced}"
-PARTS_DIR="${2:-probing_results_${ALIGNMENT}/_parts}"
-OUT_DIR="${3:-probing_results_${ALIGNMENT}}"
+# Both are normally passed in by slurm/pipeline.sh (which owns the run
+# timestamp); PARTS_DIR/OUT_DIR must point at the same results/<ts>/ run dir.
+PARTS_DIR="${1:?PARTS_DIR required (e.g. results/<timestamp>/_parts)}"
+OUT_DIR="${2:?OUT_DIR required (e.g. results/<timestamp>)}"
 
 echo "Job started at : $(date)"
 echo "SLURM_JOBID    : ${SLURM_JOBID}"

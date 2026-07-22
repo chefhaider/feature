@@ -44,7 +44,7 @@ export HF_HUB_DISABLE_XET=1          # Xet backend stalled in a previous run; us
 
 nvidia-smi
 
-OUTPUT_DIR="/home/woody/vlbi/vlbi108v/BIMAP-FEATURE/embeddings/${MODEL_TAG}"
+OUTPUT_DIR="/home/woody/vlbi/vlbi108v/BIMAP-FEATURE/artifacts/embeddings/${MODEL_TAG}"
 
 python src/extract_features.py \
     --model "${MODEL}" \
