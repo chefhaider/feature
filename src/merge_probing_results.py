@@ -1,17 +1,5 @@
 #!/usr/bin/env python3
-"""
-Merge per-model probing outputs into one combined set of figures and tables.
 
-Each part directory (e.g. results/<ts>/_parts/base/) holds that model's
-layer_df.csv, xling_df.csv and gap_folds.csv. This concatenates them across models
-and runs the same figure/table generation as a single combined job.
-
-Usage:
-    python src/merge_probing_results.py \
-        --parts-dir results/<ts>/_parts \
-        --output-dir results/<ts> \
-        --models base xlsr53 xlsr300m
-"""
 import argparse
 import sys
 from pathlib import Path

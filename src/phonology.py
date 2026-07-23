@@ -1,40 +1,9 @@
-"""
-Phonological feature extraction.
 
-Replaces the grapheme-based pseudo-G2P (which mapped letters straight to features
-and is invalid across languages) with a proper, language-independent pipeline:
-
-    transcription --(gruut, pure-Python G2P)--> IPA phonemes
-    IPA phoneme   --(panphon distinctive features)--> compact phonological labels
-
-We extract four label sets, chosen to match the project hypotheses and to be
-well-defined cross-linguistically:
-
-    voicing : {voiced, voiceless}                     probe on OBSTRUENTS only
-    nasal   : {nasal, oral}                            probe on all segments
-    manner  : {plosive, fricative, affricate,
-               nasal, approximant}                     probe on CONSONANTS
-    place   : {labial, coronal, dorsal, laryngeal}     probe on CONSONANTS
-
-The per-feature segment filter matters as much as the labels themselves: the
-voiced/voiceless contrast is only phonemic for obstruents (sonorants are ~all
-voiced), so probing voicing on every segment yields a near-constant label -- the
-exact failure mode of the MVP. Use SEGMENT_FILTERS / keep_for() to apply it.
-
-These functions return ONE label set per phoneme. To actually probe them you must
-pair each phoneme with the wav2vec2 frame(s) it occupies (see src/align.py).
-
-Dependencies (install into the `feature` conda env and run on the cluster):
-    pip install "gruut[de,es]" panphon
-    # gruut is pure-Python (no system binary); the [de,es] extra adds the German
-    # and Spanish data (English ships by default).
-"""
 from __future__ import annotations
 
 from functools import lru_cache
 from typing import Dict, List, Optional
 
-# FLEURS language code -> gruut language
 LANG_CODE: Dict[str, str] = {
     "en_us": "en-us",
     "de_de": "de-de",
@@ -43,7 +12,6 @@ LANG_CODE: Dict[str, str] = {
 
 FEATURES = ["voicing", "nasal", "manner", "place"]
 
-# Which segments each feature should be probed on (see module docstring).
 SEGMENT_FILTERS = {
     "voicing": "obstruent",
     "nasal": "all",
@@ -68,9 +36,6 @@ def text_to_ipa(text: str, lang: str) -> str:
     return "".join(phones)
 
 
-# --------------------------------------------------------------------------- #
-# IPA -> distinctive features -> labels
-# --------------------------------------------------------------------------- #
 @lru_cache(maxsize=1)
 def _feature_table():
     import panphon
@@ -125,10 +90,6 @@ def keep_for(feature: str, seg: Dict[str, Optional[str]]) -> bool:
         return not bool(seg["is_vowel"])
     return True  # "all"
 
-
-# --------------------------------------------------------------------------- #
-# distinctive-feature -> label logic (panphon features are in {-1, 0, 1})
-# --------------------------------------------------------------------------- #
 def _is_vowel(f: Dict[str, int]) -> bool:
     return f.get("syl", -1) == 1
 

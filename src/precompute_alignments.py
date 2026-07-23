@@ -1,17 +1,5 @@
 #!/usr/bin/env python3
-"""
-Pre-compute MMS forced-alignment phoneme spans for FLEURS utterances.
 
-Forced alignment needs the raw audio, which the embedding .pkl files do not store,
-so this reads FLEURS, aligns each utterance, and saves per-recording phoneme time
-spans to artifacts/alignment_cache.pkl for run_probing.py to consume.
-
-Cache key = (lang, id, round(audio_length, 2)): recording-unique, since FLEURS
-reuses `id` across speakers.
-
-Usage (needs the FLEURS audio and the MMS model; GPU optional but faster):
-    python src/precompute_alignments.py --max-samples 100
-"""
 import argparse
 import os
 import pickle
@@ -49,7 +37,6 @@ def main():
     print("Loading MMS aligner (~1.18 GB first time)...", flush=True)
     bundle = align.get_aligner(device)
 
-    # resume from an existing cache if present
     cache = {}
     if os.path.exists(args.output):
         with open(args.output, "rb") as f:
@@ -58,8 +45,8 @@ def main():
 
     for lang in args.languages:
         print(f"\n=== {lang} ===", flush=True)
-        # Non-streaming read from the $WORK FLEURS cache — same utterances/order
-        # as extract_features.py, and works offline on compute nodes.
+
+
         ds = load_dataset("google/fleurs", lang, split="train",
                           trust_remote_code=True)
         if len(ds) > args.max_samples:

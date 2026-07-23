@@ -1,21 +1,4 @@
-"""
-Linear-probe utilities.
 
-Logistic regression tests whether a feature is linearly readable from a frozen
-representation. Features are standardized; we report accuracy and macro-F1 (labels
-are imbalanced) against a majority-class baseline.
-
-Splits are grouped by utterance: phonemes from one recording are correlated, so a
-plain random split would let the probe memorize the recording rather than the
-phonology. Scores are repeated over several splits (within-language) or
-bootstrapped over the test set (cross-lingual), giving each metric a `_std`.
-
-Usage (X = phoneme embeddings, y = phonological labels, g = utterance ids):
-
-    from src.probing import evaluate_probe, cross_lingual_probe
-    print(evaluate_probe(X, y, groups=g))                 # within-language
-    print(cross_lingual_probe(X_en, y_en, X_de, y_de))    # train EN, test DE
-"""
 from collections import Counter
 
 import numpy as np
@@ -37,7 +20,6 @@ def make_probe():
     )
 
 
-# --- H3 paired k-fold transfer-gap test ---
 def _macro_f1(y_true, y_pred):
     return float(f1_score(y_true, y_pred, average="macro", zero_division=0))
 

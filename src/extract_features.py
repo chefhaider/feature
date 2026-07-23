@@ -16,7 +16,6 @@ import argparse
 import logging
 from typing import List, Dict, Any
 
-# wav2vec2 models are trained on 16 kHz audio and do NOT resample internally.
 TARGET_SR = 16000
 
 # Setup logging
