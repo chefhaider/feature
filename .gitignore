@@ -1,1 +1,3 @@
 artifacts/embeddings/
+__pycache__/
+*.pyc

@@ -1,0 +1,10 @@
+run_timestamp : 20260723_02061011
+submitted_at  : Thu Jul 23 02:06:10 AM CEST 2026
+n_probe       : 100
+alignment     : forced (MMS)
+layer_stride  : 2
+n_repeats     : 5
+kfold         : 5
+kfold_repeats : 3
+models        : base xlsr53 xlsr300m
+git_commit    : 0edd662

@@ -2,16 +2,14 @@
 """
 Pre-compute MMS forced-alignment phoneme spans for FLEURS utterances.
 
-Forced alignment needs the raw audio (the embedding .pkl files don't store it),
-so this streams FLEURS, aligns each utterance, and saves per-recording phoneme
-time-spans to artifacts/alignment_cache.pkl. run_probing.py --alignment forced
-then slices the saved hidden states by these real spans instead of splitting
-frames uniformly.
+Forced alignment needs the raw audio, which the embedding .pkl files do not store,
+so this reads FLEURS, aligns each utterance, and saves per-recording phoneme time
+spans to artifacts/alignment_cache.pkl for run_probing.py to consume.
 
-Key = (lang, id, round(audio_length, 2)) — recording-unique, because FLEURS
-reuses `id` across speakers (same sentence, different audio/duration).
+Cache key = (lang, id, round(audio_length, 2)): recording-unique, since FLEURS
+reuses `id` across speakers.
 
-Usage (needs audio + the 1.18 GB MMS model; GPU optional but faster):
+Usage (needs the FLEURS audio and the MMS model; GPU optional but faster):
     python src/precompute_alignments.py --max-samples 100
 """
 import argparse

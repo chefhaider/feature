@@ -1,0 +1,79 @@
+RESULTS SUMMARY
+======================================================================
+
+Probes use GROUPED splits (by utterance); all metrics are mean over repeated splits / bootstraps, with _std available in the CSVs.
+
+H2 — within-language macro-F1 by model x layer (mean over languages & features):
+feature         manner  nasal  place  voicing
+model    layer                               
+xlsr300m 0       0.554  0.709  0.609    0.782
+         2       0.581  0.714  0.633    0.766
+         4       0.623  0.731  0.712    0.795
+         6       0.668  0.738  0.752    0.815
+         8       0.690  0.759  0.782    0.830
+         10      0.710  0.766  0.786    0.839
+         12      0.701  0.766  0.790    0.833
+         14      0.712  0.773  0.794    0.848
+         16      0.747  0.800  0.814    0.879
+         18      0.734  0.783  0.814    0.880
+         20      0.689  0.769  0.784    0.859
+         22      0.676  0.772  0.767    0.847
+         24      0.664  0.759  0.759    0.837
+
+Best layer per model x feature (by within-language macro-F1):
+          manner  nasal  place  voicing
+xlsr300m      16     16     18       18
+
+H1 — cross-lingual transfer (all pairs) at best layer, by model:
+model    xlsr300m
+feature          
+manner      0.533
+nasal       0.728
+place       0.658
+voicing     0.753
+
+H1 — bootstrap sd of those values:
+model    xlsr300m
+feature          
+manner      0.045
+nasal       0.050
+place       0.054
+voicing     0.039
+
+H1 — majority baseline (macro-F1):
+model    xlsr300m
+feature          
+manner      0.091
+nasal       0.469
+place       0.263
+voicing     0.382
+
+H3 — transfer gap per feature, PER MODEL (not aggregated):
+   model feature  best_layer  within_lang  cross_lang  transfer_gap
+xlsr300m  manner          16        0.747       0.533         0.214
+xlsr300m   place          18        0.814       0.658         0.156
+xlsr300m voicing          18        0.880       0.753         0.127
+xlsr300m   nasal          16        0.800       0.728         0.072
+
+H3 (STAT TEST) — paired k-fold transfer gap, 95% CI  (* = CI excludes 0 → gap is real):
+model                   xlsr300m
+feature                         
+voicing  0.142 [0.081, 0.205]  *
+nasal      0.075 [-0.059, 0.129]
+manner   0.227 [0.106, 0.306]  *
+place      0.158 [-0.002, 0.227]
+
+H3 (STAT TEST) — pairwise gap differences, 95% CI  (* = features significantly differ):
+   model feature_a feature_b              diff_[95% CI]
+xlsr300m   voicing     nasal    0.067 [0.005, 0.159]  *
+xlsr300m   voicing    manner     -0.085 [-0.176, 0.045]
+xlsr300m   voicing     place     -0.016 [-0.107, 0.120]
+xlsr300m     nasal    manner -0.152 [-0.235, -0.050]  *
+xlsr300m     nasal     place -0.083 [-0.130, -0.020]  *
+xlsr300m    manner     place      0.069 [-0.067, 0.207]
+
+All-pairs transfer matrix — xlsr300m (rows=train, cols=test):
+        en_us  de_de  es_419
+en_us   0.873  0.693   0.684
+de_de   0.679  0.808   0.604
+es_419  0.693  0.653   0.749

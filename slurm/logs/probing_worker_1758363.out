@@ -1,0 +1,173 @@
+### Starting TaskPrologue of job 1758363 on tg074 at Thu Jul 23 02:06:14 AM CEST 2026
+Running on cores 6-7,14-15,22-23,30-31 with governor ondemand
+Thu Jul 23 02:06:14 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.173.02             Driver Version: 580.173.02     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  Tesla V100-PCIE-32GB           On  |   00000000:AF:00.0 Off |                    0 |
+| N/A   35C    P0             26W /  250W |       0MiB /  32768MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+### Finished TaskPrologue
+
+Job started at : Thu Jul 23 02:06:14 AM CEST 2026
+Host           : tg074
+SLURM_JOBID    : 1758363
+MODEL          : xlsr53
+N_PROBE        : 100
+LAYER_STRIDE   : 2
+N_REPEATS      : 5
+KFOLD          : 5 x 3
+PARTS_DIR      : results/20260723_02061011/_parts
+Models      : ['xlsr53']
+N_PROBE     : 100
+Alignment   : forced (MMS)
+Repeats     : 5   Layer stride: 2
+Output      : /home/woody/vlbi/vlbi108v/BIMAP-FEATURE/results/20260723_02061011/_parts/xlsr53
+Loaded alignment cache: 300 entries from artifacts/alignment_cache.pkl
+
+== xlsr53 ==
+   25 layers, probing 13: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+   layer 0 done
+   layer 2 done
+   layer 4 done
+   layer 6 done
+   layer 8 done
+   layer 10 done
+   layer 12 done
+   layer 14 done
+   layer 16 done
+   layer 18 done
+   layer 20 done
+   layer 22 done
+   layer 24 done
+   H3 k-fold gap test done (180 fold-rows so far)
+
+layer_df: (156, 15) | xling_df: (312, 16) | gap_df: (180, 12)
+Saved results/20260723_02061011/_parts/xlsr53/fig_h2_layers.png
+Saved results/20260723_02061011/_parts/xlsr53/fig_h1_models.png
+Saved results/20260723_02061011/_parts/xlsr53/fig_h1_transfer_by_layer.png
+Saved results/20260723_02061011/_parts/xlsr53/fig_h3_transfer_gap.png
+Saved results/20260723_02061011/_parts/xlsr53/fig_language_matrix.png
+Saved results/20260723_02061011/_parts/xlsr53/fig_h3_gap_ci.png
+Saved results/20260723_02061011/_parts/xlsr53/fig_h3_pairwise.png
+Saved results/20260723_02061011/_parts/xlsr53/fig_h3_gap_std.png
+
+RESULTS SUMMARY
+======================================================================
+
+Probes use GROUPED splits (by utterance); all metrics are mean over repeated splits / bootstraps, with _std available in the CSVs.
+
+H2 — within-language macro-F1 by model x layer (mean over languages & features):
+feature       manner  nasal  place  voicing
+model  layer                               
+xlsr53 0       0.553  0.709  0.603    0.780
+       2       0.581  0.724  0.646    0.773
+       4       0.640  0.732  0.724    0.800
+       6       0.687  0.741  0.763    0.819
+       8       0.698  0.758  0.780    0.835
+       10      0.722  0.767  0.788    0.841
+       12      0.700  0.766  0.787    0.843
+       14      0.729  0.777  0.798    0.863
+       16      0.747  0.795  0.821    0.878
+       18      0.722  0.779  0.798    0.869
+       20      0.691  0.762  0.774    0.844
+       22      0.691  0.780  0.782    0.858
+       24      0.696  0.783  0.779    0.854
+
+Best layer per model x feature (by within-language macro-F1):
+        manner  nasal  place  voicing
+xlsr53      16     16     16       16
+
+H1 — cross-lingual transfer (all pairs) at best layer, by model:
+model    xlsr53
+feature        
+manner    0.513
+nasal     0.760
+place     0.660
+voicing   0.721
+
+H1 — bootstrap sd of those values:
+model    xlsr53
+feature        
+manner    0.037
+nasal     0.016
+place     0.037
+voicing   0.052
+
+H1 — majority baseline (macro-F1):
+model    xlsr53
+feature        
+manner    0.091
+nasal     0.469
+place     0.263
+voicing   0.382
+
+H3 — transfer gap per feature, PER MODEL (not aggregated):
+ model feature  best_layer  within_lang  cross_lang  transfer_gap
+xlsr53  manner          16        0.747       0.513         0.235
+xlsr53   place          16        0.821       0.660         0.160
+xlsr53 voicing          16        0.878       0.721         0.156
+xlsr53   nasal          16        0.795       0.760         0.035
+
+H3 (STAT TEST) — paired k-fold transfer gap, 95% CI  (* = CI excludes 0 → gap is real):
+model                     xlsr53
+feature                         
+voicing  0.168 [0.114, 0.241]  *
+nasal      0.049 [-0.043, 0.086]
+manner   0.253 [0.150, 0.336]  *
+place    0.165 [0.025, 0.232]  *
+
+H3 (STAT TEST) — pairwise gap differences, 95% CI  (* = features significantly differ):
+ model feature_a feature_b              diff_[95% CI]
+xlsr53   voicing     nasal    0.119 [0.059, 0.213]  *
+xlsr53   voicing    manner     -0.085 [-0.167, 0.032]
+xlsr53   voicing     place      0.004 [-0.070, 0.122]
+xlsr53     nasal    manner -0.204 [-0.304, -0.098]  *
+xlsr53     nasal     place -0.115 [-0.172, -0.056]  *
+xlsr53    manner     place      0.088 [-0.037, 0.205]
+
+All-pairs transfer matrix — xlsr53 (rows=train, cols=test):
+        en_us  de_de  es_419
+en_us   0.878  0.703   0.670
+de_de   0.678  0.806   0.637
+es_419  0.659  0.634   0.746
+
+
+Saved CSVs + summary to results/20260723_02061011/_parts/xlsr53/
+
+Total time: 377.9 min
+Job finished at: Thu Jul 23 08:25:06 AM CEST 2026
+=== JOB_STATISTICS ===
+=== current date     : Thu Jul 23 08:25:06 AM CEST 2026
+= Job-ID             : 1758363 on tinygpu
+= Job-Name           : probing_worker
+= Job-Command        : /home/woody/vlbi/vlbi108v/BIMAP-FEATURE/slurm/probing_worker.sh
+= Initial workdir    : /home/woody/vlbi/vlbi108v/BIMAP-FEATURE
+= Queue/Partition    : v100
+= Slurm account      : vlbi with QOS=normal
+= Requested resources:  for 12:00:00
+= Elapsed runtime    : 06:18:53
+= Total RAM usage    : 20.7 GiB of requested  GiB (%)   
+= Node list          : tg074
+= Subm/Elig/Start/End: 2026-07-23T02:06:12 / 2026-07-23T02:06:12 / 2026-07-23T02:06:13 / 2026-07-23T08:25:06
+======================
+=== Quota infos ======
+    Path                 Used     SoftQ    HardQ    Gracetime  Filec    FileQ    FiHaQ    FileGrace    
+    /home/hpc              62.2G   104.9G   209.7G        N/A     120K     500K   1,000K        N/A    
+    /home/woody            67.0G  1000.0G  1500.0G        N/A   1,382    5,000K   7,500K        N/A    
+======================
+=== GPU utilization ==
+gpu_name, gpu_bus_id, pid, gpu_utilization [%], mem_utilization [%], max_memory_usage [MiB], time [ms]

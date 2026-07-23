@@ -10,7 +10,7 @@
 
 # Probe ONE model. Meant to be submitted 3x in parallel (base/xlsr53/xlsr300m)
 # by slurm/pipeline.sh -- not usually run by hand.
-#   Usage: sbatch slurm/probing_worker.sh MODEL [N_PROBE] [LAYER_STRIDE] [N_REPEATS] [PARTS_DIR]
+#   Usage: sbatch slurm/probing_worker.sh MODEL [N_PROBE] [LAYER_STRIDE] [N_REPEATS] [PARTS_DIR] [KFOLD] [KFOLD_REPEATS]
 
 set -eo pipefail
 
@@ -21,6 +21,8 @@ N_REPEATS="${4:-5}"
 # Normally passed in by slurm/pipeline.sh so all 3 workers share one run dir.
 # The fallback only applies when running this worker standalone by hand.
 PARTS_DIR="${5:-results/$(date +%Y%m%d_%H%M%S%2N)/_parts}"
+KFOLD="${6:-5}"
+KFOLD_REPEATS="${7:-5}"
 
 echo "Job started at : $(date)"
 echo "Host           : $(hostname)"
@@ -29,6 +31,7 @@ echo "MODEL          : ${MODEL}"
 echo "N_PROBE        : ${N_PROBE}"
 echo "LAYER_STRIDE   : ${LAYER_STRIDE}"
 echo "N_REPEATS      : ${N_REPEATS}"
+echo "KFOLD          : ${KFOLD} x ${KFOLD_REPEATS}"
 echo "PARTS_DIR      : ${PARTS_DIR}"
 
 cd "$WORK/BIMAP-FEATURE"
@@ -53,6 +56,8 @@ python src/run_probing.py \
     --models "${MODEL}" \
     --layer-stride "${LAYER_STRIDE}" \
     --n-repeats "${N_REPEATS}" \
+    --kfold "${KFOLD}" \
+    --kfold-repeats "${KFOLD_REPEATS}" \
     --output-dir "${PARTS_DIR}/${MODEL}"
 
 echo "Job finished at: $(date)"

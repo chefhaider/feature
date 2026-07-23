@@ -1,20 +1,14 @@
 """
-Forced alignment bridge: map phonemes to wav2vec2 frames so the phonological
-labels from `phonology.py` can be attached to embeddings for segment-level probing.
+Forced alignment: map phonemes to wav2vec2 frames so the phonological labels from
+`phonology.py` can be attached to embeddings for segment-level probing.
 
-Approach (kept deliberately simple):
-    1. torchaudio's MMS forced aligner gives WORD time spans for an utterance.
+    1. torchaudio's MMS forced aligner gives word time spans for an utterance.
     2. Each word span is split uniformly across that word's phonemes
-       (phonemizer/panphon via phonology.py) -> per-phoneme time spans.
+       (via phonology.py) -> per-phoneme time spans.
     3. For a saved hidden-state layer, slice the frames inside each phoneme span
        and mean-pool -> one embedding per phoneme, with its feature label.
 
-The raw FLEURS audio is needed for step 1 (the saved .pkl holds only hidden
-states), so run this where the FLEURS audio is available/cached.
-
-NOTE: the MMS calls in get_aligner()/align_words() follow the torchaudio
-"Forced alignment for multilingual data" tutorial API -- validate once on the
-cluster (torchaudio version, dictionary coverage for de/es diacritics).
+Step 1 needs the raw FLEURS audio, since the saved .pkl holds only hidden states.
 """
 import re
 import unicodedata

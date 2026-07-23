@@ -1,23 +1,14 @@
 """
-Simple linear-probe utilities.
+Linear-probe utilities.
 
-Logistic regression is the right default for probing: it tests whether a feature
-is *linearly* readable from a frozen representation (a non-linear probe can find
-structure the model doesn't actually expose linearly). We standardize the
-features, report accuracy + macro-F1 (the labels are imbalanced, so macro-F1
-matters), and always compare against a majority-class baseline.
+Logistic regression tests whether a feature is linearly readable from a frozen
+representation. Features are standardized; we report accuracy and macro-F1 (labels
+are imbalanced) against a majority-class baseline.
 
-Two things matter for validity:
-
-  * GROUPED splits. Phonemes from the same recording are highly correlated (same
-    speaker, same channel). A plain random split puts phonemes from one utterance
-    on both sides, so the probe can memorize the recording instead of the
-    phonology -- which inflates within-language scores. Pass `groups` (one
-    utterance id per phoneme) and the split is made at the utterance level.
-
-  * ERROR BARS. Every score is repeated over several splits (within-language) or
-    bootstrapped over the test set (cross-lingual), so each metric comes with a
-    `_std`. Differences smaller than the spread are not real.
+Splits are grouped by utterance: phonemes from one recording are correlated, so a
+plain random split would let the probe memorize the recording rather than the
+phonology. Scores are repeated over several splits (within-language) or
+bootstrapped over the test set (cross-lingual), giving each metric a `_std`.
 
 Usage (X = phoneme embeddings, y = phonological labels, g = utterance ids):
 
@@ -25,11 +16,13 @@ Usage (X = phoneme embeddings, y = phonological labels, g = utterance ids):
     print(evaluate_probe(X, y, groups=g))                 # within-language
     print(cross_lingual_probe(X_en, y_en, X_de, y_de))    # train EN, test DE
 """
+from collections import Counter
+
 import numpy as np
 from sklearn.dummy import DummyClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, f1_score
-from sklearn.model_selection import GroupShuffleSplit, StratifiedShuffleSplit
+from sklearn.model_selection import GroupShuffleSplit, KFold, StratifiedShuffleSplit
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
@@ -42,6 +35,86 @@ def make_probe():
         StandardScaler(),
         LogisticRegression(max_iter=2000, class_weight="balanced"),
     )
+
+
+# --- H3 paired k-fold transfer-gap test ---
+def _macro_f1(y_true, y_pred):
+    return float(f1_score(y_true, y_pred, average="macro", zero_division=0))
+
+
+def _majority_macro_f1(y_train, y_test):
+    """macro-F1 of always predicting language A's majority class on the test set."""
+    maj = Counter(y_train).most_common(1)[0][0]
+    return _macro_f1(y_test, np.full(len(y_test), maj))
+
+
+def _norm(f1, base):
+    """Baseline-normalized score: 0 = majority baseline, 1 = perfect. Makes gaps
+    comparable across features, which differ in class count and baseline."""
+    denom = 1.0 - base
+    return float((f1 - base) / denom) if denom > 1e-9 else np.nan
+
+
+def paired_gap_kfold(Xa, ya, ga, others, k=5, repeats=5, random_state=0,
+                     min_train=8, min_test=4):
+    """Paired within-vs-cross-lingual transfer gap for one (feature, train-lang A).
+
+    For each of k folds (split of A's utterances, repeated `repeats` times):
+      within_i = macro-F1 on A's held-out utterances,
+      cross_i  = mean macro-F1 on every other language in `others`,
+      gap_i    = within_i - cross_i.
+
+    Within and cross share the same probe and training set, so the gap is paired and
+    comes from held-out folds.
+
+    Xa, ya : (N, D), (N,) phonemes of language A at one layer/feature.
+    ga     : (N,) utterance id per phoneme, used for fold grouping.
+    others : list of (Xb, yb) for the test languages.
+    Returns a list of per-fold dicts, empty if the data is too small.
+    """
+    Xa, ya, ga = np.asarray(Xa), np.asarray(ya), np.asarray(ga)
+    if len(ya) < 2 * k or len(set(ya)) < 2 or not others:
+        return []
+    uniq = np.array(sorted(set(ga.tolist())))
+    if len(uniq) < k:
+        return []
+
+    rng = np.random.RandomState(random_state)
+    out = []
+    for rep in range(repeats):
+        kf = KFold(n_splits=k, shuffle=True, random_state=rng.randint(1 << 30))
+        for fold, (tr_u, te_u) in enumerate(kf.split(uniq)):
+            train_g, test_g = set(uniq[tr_u]), set(uniq[te_u])
+            trm = np.fromiter((g in train_g for g in ga), bool, len(ga))
+            tem = np.fromiter((g in test_g for g in ga), bool, len(ga))
+            if trm.sum() < min_train or tem.sum() < min_test:
+                continue
+            if len(set(ya[trm])) < 2 or len(set(ya[tem])) < 2:
+                continue
+
+            probe = make_probe().fit(Xa[trm], ya[trm])
+            within = _macro_f1(ya[tem], probe.predict(Xa[tem]))
+            within_base = _majority_macro_f1(ya[trm], ya[tem])
+
+            c_vals, c_bases = [], []
+            for Xb, yb in others:
+                Xb, yb = np.asarray(Xb), np.asarray(yb)
+                if len(yb) < min_test or len(set(yb)) < 2:
+                    continue
+                c_vals.append(_macro_f1(yb, probe.predict(Xb)))
+                c_bases.append(_majority_macro_f1(ya[trm], yb))
+            if not c_vals:
+                continue
+            cross, cross_base = float(np.mean(c_vals)), float(np.mean(c_bases))
+
+            out.append({
+                "rep": rep, "fold": fold,
+                "within": within, "cross": cross, "gap": within - cross,
+                "within_norm": _norm(within, within_base),
+                "cross_norm": _norm(cross, cross_base),
+                "gap_norm": _norm(within, within_base) - _norm(cross, cross_base),
+            })
+    return out
 
 
 def _split_scores(y_true, y_pred, y_majority):

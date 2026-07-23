@@ -1,34 +1,21 @@
 #!/usr/bin/env python3
 """
-Segment-level phonological probing — batch version of notebook/segment_probing copy.ipynb.
+Segment-level phonological probing.
 
-Pipeline:
-  - load extracted wav2vec2 embeddings (artifacts/embeddings/<tag>/<lang>_features.pkl)
-  - attach phoneme labels to their real frames via MMS forced alignment
-  - train linear probes across model x feature x LAYER x language
-  - train ALL-PAIRS cross-lingual probes (every train->test language pair)
-  - write H1/H2/H3 tables (CSV), figures (PNG), and a text summary.
+Loads wav2vec2 embeddings, attaches phoneme labels to their frames via MMS forced
+alignment, and trains linear probes across model x feature x layer x language plus
+all-pairs cross-lingual transfer. Writes H1/H2/H3 tables, figures and a summary.
 
-Methodology notes:
-  * Frame->phoneme mapping uses FORCED ALIGNMENT (artifacts/alignment_cache.pkl,
-    built by src/precompute_alignments.py). The earlier "uniform" mode -- which
-    split each utterance's frames evenly across its phonemes -- was removed: it
-    ignored leading silence and real phoneme durations, roughly halving probe
-    scores (voicing EN 0.50 uniform vs 0.86 forced). The uniform baseline run is
-    preserved at results/20260706_21094441/ and in git history.
-  * Probes use GROUPED train/test splits (by utterance) so phonemes from one
-    recording never straddle the split -- a random split inflates scores.
-  * Every layer is probed (not a sample of 5), so H2 gets a real curve.
-  * H1/H3 are reported at each model+feature's BEST layer (chosen by
-    within-language macro-F1), not an arbitrary middle layer.
-  * All metrics carry a `_std` (repeated splits / bootstrap).
+Probes use grouped train/test splits (by utterance) so phonemes from one recording
+never straddle the split. H1/H3 are reported at each model+feature's best layer,
+selected by within-language macro-F1. All metrics carry a `_std`.
 
-CPU-only: no GPU needed.
+CPU-only.
 
 Usage:
     python src/run_probing.py
     python src/run_probing.py --n-probe 60
-    python src/run_probing.py --layer-stride 2      # faster: every other layer
+    python src/run_probing.py --layer-stride 2
 """
 import argparse
 import os
@@ -50,7 +37,7 @@ sys.path.insert(0, str(ROOT))
 
 from src.align import segment_dataset
 from src.phonology import FEATURES
-from src.probing import evaluate_probe, cross_lingual_probe
+from src.probing import evaluate_probe, cross_lingual_probe, paired_gap_kfold
 
 LANGUAGES = ["en_us", "de_de", "es_419"]
 ALL_MODELS = {
@@ -60,13 +47,13 @@ ALL_MODELS = {
 }
 ALIGN_CACHE_PATH = "artifacts/alignment_cache.pkl"
 
-# Okabe-Ito colorblind-safe hues
+# colorblind-safe palette
 C_WITHIN, C_CROSS, C_LINE = "#0072B2", "#E69F00", "#9AA0A6"
 FEATURE_COLORS = {"voicing": "#0072B2", "nasal": "#E69F00",
                   "manner": "#009E73", "place": "#D55E00"}
 
 
-# ── caches ────────────────────────────────────────────────────────────────────
+# --- caches ---
 def load_align_cache():
     if os.path.exists(ALIGN_CACHE_PATH):
         with open(ALIGN_CACHE_PATH, "rb") as f:
@@ -76,22 +63,21 @@ def load_align_cache():
     return None
 
 
-# ── data assembly ─────────────────────────────────────────────────────────────
+# --- data assembly ---
 def load_utts(model_dir, lang, n):
     with open(f"{model_dir}/{lang}_features.pkl", "rb") as f:
         return pickle.load(f)[:n]
 
 
 def utt_key(lang, s):
-    """Recording-unique id (FLEURS reuses `id` across speakers).
-    Tuple form — matches the alignment-cache key written by precompute_alignments.py."""
+    """Recording-unique key; matches the alignment-cache key. FLEURS reuses `id`
+    across speakers, so audio_length is included."""
     return (lang, s.get("id"), round(float(s.get("audio_length", 0.0)), 2))
 
 
 def utt_gid(lang, s):
-    """Same identity as utt_key but as a flat string, for use as a sklearn `groups`
-    label. (A list of tuples would become a 2-D object array, which breaks
-    GroupShuffleSplit — groups must be 1-D scalars.)"""
+    """utt_key as a flat string, for use as a sklearn `groups` label (groups must
+    be 1-D scalars)."""
     return f"{lang}|{s.get('id')}|{round(float(s.get('audio_length', 0.0)), 2)}"
 
 
@@ -130,16 +116,19 @@ def safe_evaluate(X, y, groups=None, n_repeats=5):
         return None
 
 
-# ── main experiment loop ──────────────────────────────────────────────────────
-def run_probes(models, n_probe, align_cache, n_repeats=5, layer_stride=1):
-    """Probe every model x feature x layer x language, plus all-pairs transfer.
+# --- experiment loop ---
+def run_probes(models, n_probe, align_cache, n_repeats=5, layer_stride=1,
+               kfold=5, kfold_repeats=5):
+    """Probe every model x feature x layer x language, plus all-pairs transfer,
+    plus the paired k-fold H3 transfer-gap test.
 
-    Returns (layer_df, xling_df):
+    Returns (layer_df, xling_df, gap_df):
       layer_df — within-language score per model x feature x layer x language (H2,
                  and the within-language reference for H3)
       xling_df — all-pairs transfer per model x feature x layer x train x test
+      gap_df   — per-fold within/cross/gap at each feature's best layer (H3 CIs)
     """
-    layer_rows, xling_rows = [], []
+    layer_rows, xling_rows, gap_rows = [], [], []
 
     for tag, mdir in models.items():
         print(f"\n== {tag} ==", flush=True)
@@ -149,7 +138,7 @@ def run_probes(models, n_probe, align_cache, n_repeats=5, layer_stride=1):
         print(f"   {n_layers} layers, probing {len(layers)}: {layers}", flush=True)
 
         for L in layers:
-            # memo the (X, y, groups) per (lang, feature) for THIS layer only
+            # cache (X, y, groups) per (lang, feature) for this layer
             memo = {}
 
             def seg(lang, feat, _L=L):
@@ -159,7 +148,7 @@ def run_probes(models, n_probe, align_cache, n_repeats=5, layer_stride=1):
                 return memo[k]
 
             for feat in FEATURES:
-                # within-language (H2 curve + H3 reference), one probe per language
+                # within-language: one probe per language
                 for lang in LANGUAGES:
                     X, y, g = seg(lang, feat)
                     res = safe_evaluate(X, y, g, n_repeats)
@@ -167,7 +156,7 @@ def run_probes(models, n_probe, align_cache, n_repeats=5, layer_stride=1):
                         layer_rows.append({"model": tag, "feature": feat, "layer": L,
                                            "language": lang, **res})
 
-                # all-pairs cross-lingual transfer (every ordered train->test pair)
+                # cross-lingual transfer, all ordered pairs
                 for tr_lang in LANGUAGES:
                     Xtr, ytr, _ = seg(tr_lang, feat)
                     if len(ytr) < 12 or len(set(ytr)) < 2:
@@ -187,12 +176,30 @@ def run_probes(models, n_probe, align_cache, n_repeats=5, layer_stride=1):
                                            "train_lang": tr_lang, "test_lang": te_lang, **r})
             memo.clear()
             print(f"   layer {L} done", flush=True)
+
+        # H3 paired k-fold gap test at each feature's best layer
+        this = pd.DataFrame([r for r in layer_rows if r["model"] == tag])
+        best = (this.groupby(["feature", "layer"])["macro_f1"].mean().reset_index()
+                    .loc[lambda d: d.groupby("feature")["macro_f1"].idxmax()]
+                    .set_index("feature")["layer"].to_dict()) if len(this) else {}
+        for feat, L in best.items():
+            data = {lang: segment_xy({lang: utts[lang]}, int(L), feat, align_cache)
+                    for lang in LANGUAGES}
+            for A in LANGUAGES:
+                Xa, ya, ga = data[A]
+                others = [(data[B][0], data[B][1]) for B in LANGUAGES if B != A]
+                folds = paired_gap_kfold(Xa, ya, ga, others,
+                                         k=kfold, repeats=kfold_repeats)
+                for fr in folds:
+                    gap_rows.append({"model": tag, "feature": feat, "train_lang": A,
+                                     "layer": int(L), **fr})
+        print(f"   H3 k-fold gap test done ({len(gap_rows)} fold-rows so far)", flush=True)
         del utts
 
-    return pd.DataFrame(layer_rows), pd.DataFrame(xling_rows)
+    return (pd.DataFrame(layer_rows), pd.DataFrame(xling_rows), pd.DataFrame(gap_rows))
 
 
-# ── best-layer selection & H1/H3 tables ───────────────────────────────────────
+# --- best-layer selection and H1/H3 tables ---
 def best_layers(layer_df):
     """Best layer per (model, feature), by mean within-language macro-F1."""
     m = layer_df.groupby(["model", "feature", "layer"])["macro_f1"].mean().reset_index()
@@ -250,7 +257,160 @@ def language_matrix(layer_df, xling_df, model):
     return mat
 
 
-# ── figures ───────────────────────────────────────────────────────────────────
+# --- H3 gap CIs and pairwise feature differences ---
+def _ci(vals, lo=2.5, hi=97.5):
+    v = np.asarray(vals, float)
+    v = v[~np.isnan(v)]
+    if len(v) == 0:
+        return np.nan, np.nan, np.nan
+    return float(v.mean()), float(np.percentile(v, lo)), float(np.percentile(v, hi))
+
+
+def gap_summary(gap_df, col="gap"):
+    """Per (model, feature): mean gap + 95% CI over all folds/repeats/train-langs.
+    `sig` = CI excludes 0 (gap distinguishable from zero)."""
+    rows = []
+    if gap_df.empty:
+        return pd.DataFrame(rows)
+    for (m, f), sub in gap_df.groupby(["model", "feature"]):
+        mean, lo, hi = _ci(sub[col])
+        rows.append({"model": m, "feature": f, "n_folds": len(sub),
+                     "gap_mean": mean, "ci_lo": lo, "ci_hi": hi,
+                     "sig": bool(lo > 0 or hi < 0)})
+    return pd.DataFrame(rows)
+
+
+def gap_pairwise(gap_df, col="gap"):
+    """Per model, for each feature pair: mean PAIRED difference of gaps + 95% CI.
+    Paired by (train_lang, rep, fold) so fold noise cancels. `sig` = CI excludes 0
+    (one feature is significantly more language-specific than the other)."""
+    rows = []
+    if gap_df.empty:
+        return pd.DataFrame(rows)
+    for m, sub in gap_df.groupby("model"):
+        piv = sub.pivot_table(index=["train_lang", "rep", "fold"],
+                              columns="feature", values=col)
+        feats = [f for f in FEATURES if f in piv.columns]
+        for i, fi in enumerate(feats):
+            for fj in feats[i + 1:]:
+                d = (piv[fi] - piv[fj]).dropna().values
+                if len(d) < 2:
+                    continue
+                mean, lo, hi = _ci(d)
+                rows.append({"model": m, "feature_a": fi, "feature_b": fj,
+                             "mean_diff": mean, "ci_lo": lo, "ci_hi": hi,
+                             "n": len(d), "sig": bool(lo > 0 or hi < 0)})
+    return pd.DataFrame(rows)
+
+
+def make_gap_figures(gap_df, models, out_dir):
+    """Figures for the H3 gap test."""
+    if gap_df.empty:
+        print("No gap data — skipping H3 CI figures.")
+        return
+    mods = [m for m in models if m in set(gap_df.model)]
+    summ = gap_summary(gap_df, "gap")
+    pair = gap_pairwise(gap_df, "gap")
+
+    # gap with 95% CI per feature, per model
+    fig, axes = plt.subplots(1, len(mods), figsize=(4.8 * len(mods), 3.8),
+                             squeeze=False, sharex=True)
+    for ax, tag in zip(axes[0], mods):
+        s = summ[summ.model == tag].set_index("feature").reindex(FEATURES).dropna(subset=["gap_mean"])
+        ys = range(len(s))
+        for yi, (_, r) in zip(ys, s.iterrows()):
+            color = "#0072B2" if r.sig else "#B0B0B0"
+            ax.plot([r.ci_lo, r.ci_hi], [yi, yi], color=color, lw=2.5,
+                    solid_capstyle="round", zorder=2)
+            ax.plot(r.gap_mean, yi, "o", color=color, ms=8, zorder=3)
+        ax.axvline(0, color="#D55E00", lw=1.2, ls="--", zorder=1)
+        ax.set_yticks(list(ys))
+        ax.set_yticklabels([f.capitalize() for f in s.index], fontsize=10)
+        ax.set_xlabel("transfer gap (within − cross)")
+        ax.set_title(tag)
+        ax.grid(axis="x", alpha=0.3)
+        for sp in ("top", "right", "left"):
+            ax.spines[sp].set_visible(False)
+        ax.tick_params(left=False)
+    fig.suptitle("H3: transfer gap with 95% CI  ·  blue = CI excludes 0 (real) · "
+                 "gray = includes 0 (universal)", y=1.04, fontsize=11)
+    fig.tight_layout()
+    p = out_dir / "fig_h3_gap_ci.png"
+    fig.savefig(p, dpi=150, bbox_inches="tight"); plt.close(fig); print(f"Saved {p}")
+
+    # pairwise feature gap differences with 95% CI
+    if not pair.empty:
+        fig, axes = plt.subplots(1, len(mods), figsize=(4.8 * len(mods), 3.8),
+                                 squeeze=False, sharex=True)
+        for ax, tag in zip(axes[0], mods):
+            s = pair[pair.model == tag].reset_index(drop=True)
+            labels, ys = [], range(len(s))
+            for yi, (_, r) in zip(ys, s.iterrows()):
+                color = "#009E73" if r.sig else "#B0B0B0"
+                ax.plot([r.ci_lo, r.ci_hi], [yi, yi], color=color, lw=2.5,
+                        solid_capstyle="round", zorder=2)
+                ax.plot(r.mean_diff, yi, "o", color=color, ms=8, zorder=3)
+                labels.append(f"{r.feature_a[:4]}−{r.feature_b[:4]}")
+            ax.axvline(0, color="#D55E00", lw=1.2, ls="--", zorder=1)
+            ax.set_yticks(list(ys)); ax.set_yticklabels(labels, fontsize=9)
+            ax.set_xlabel("Δ gap (feature_a − feature_b)")
+            ax.set_title(tag)
+            ax.grid(axis="x", alpha=0.3)
+            for sp in ("top", "right", "left"):
+                ax.spines[sp].set_visible(False)
+            ax.tick_params(left=False)
+        fig.suptitle("H3: pairwise gap differences with 95% CI  ·  "
+                     "green = significantly different (CI excludes 0)", y=1.04, fontsize=11)
+        fig.tight_layout()
+        p = out_dir / "fig_h3_pairwise.png"
+        fig.savefig(p, dpi=150, bbox_inches="tight"); plt.close(fig); print(f"Saved {p}")
+
+    # within vs cross with per-fold +/-1 SD bands; non-overlapping bands imply a
+    # real gap, and the connector length is the gap
+    stats = (gap_df.groupby(["model", "feature"])
+             .agg(within_m=("within", "mean"), within_s=("within", "std"),
+                  cross_m=("cross", "mean"), cross_s=("cross", "std"),
+                  gap_m=("gap", "mean")).reset_index().fillna({"within_s": 0, "cross_s": 0}))
+    fig, axes = plt.subplots(1, len(mods), figsize=(5.2 * len(mods), 4.0),
+                             squeeze=False, sharex=True)
+    for ax, tag in zip(axes[0], mods):
+        s = stats[stats.model == tag].set_index("feature").reindex(FEATURES).dropna(subset=["within_m"])
+        for yi, (_, r) in zip(range(len(s)), s.iterrows()):
+            yw, yc = yi + 0.14, yi - 0.14
+            # gap connector
+            ax.plot([r.cross_m, r.within_m], [yc, yw], color=C_LINE, lw=1.3, zorder=1)
+            # within-language band and mean
+            ax.plot([r.within_m - r.within_s, r.within_m + r.within_s], [yw, yw],
+                    color=C_WITHIN, lw=8, alpha=0.22, solid_capstyle="round", zorder=2)
+            ax.plot(r.within_m, yw, "o", color=C_WITHIN, ms=7, zorder=4)
+            # cross-lingual band and mean
+            ax.plot([r.cross_m - r.cross_s, r.cross_m + r.cross_s], [yc, yc],
+                    color=C_CROSS, lw=8, alpha=0.22, solid_capstyle="round", zorder=2)
+            ax.plot(r.cross_m, yc, "o", color=C_CROSS, ms=7, zorder=4)
+            ax.text(max(r.within_m, r.cross_m) + 0.015, yi, f"gap {r.gap_m:.2f}",
+                    va="center", fontsize=8, color="#5F6368")
+        ax.set_yticks(list(range(len(s))))
+        ax.set_yticklabels([f.capitalize() for f in s.index], fontsize=10)
+        ax.set_xlabel("macro-F1")
+        ax.set_title(tag)
+        ax.set_xlim(0.3, 1.0)
+        ax.grid(axis="x", alpha=0.3)
+        for sp in ("top", "right", "left"):
+            ax.spines[sp].set_visible(False)
+        ax.tick_params(left=False)
+    # shared legend
+    from matplotlib.lines import Line2D
+    handles = [Line2D([0], [0], color=C_WITHIN, lw=8, alpha=0.4, label="within-language (±1 SD)"),
+               Line2D([0], [0], color=C_CROSS, lw=8, alpha=0.4, label="cross-lingual (±1 SD)")]
+    axes[0][-1].legend(handles=handles, loc="lower right", fontsize=8, frameon=True)
+    fig.suptitle("H3: within vs cross-lingual (±1 SD over k-fold splits)  ·  "
+                 "non-overlapping bands ⇒ gap is real", y=1.04, fontsize=11)
+    fig.tight_layout()
+    p = out_dir / "fig_h3_gap_std.png"
+    fig.savefig(p, dpi=150, bbox_inches="tight"); plt.close(fig); print(f"Saved {p}")
+
+
+# --- figures ---
 def make_figures(layer_df, xling_df, models, out_dir):
     mods = [m for m in models if m in set(layer_df.model)]
     if not mods:
@@ -258,7 +418,7 @@ def make_figures(layer_df, xling_df, models, out_dir):
         return
     h3 = h3_table(layer_df, xling_df)
 
-    # Fig 1 — H2: macro-F1 vs layer, per model (mean over languages, ±1 std band)
+    # H2: macro-F1 vs layer, per model
     fig, axes = plt.subplots(1, len(mods), figsize=(5 * len(mods), 4),
                              squeeze=False, sharey=True)
     for ax, tag in zip(axes[0], mods):
@@ -285,7 +445,7 @@ def make_figures(layer_df, xling_df, models, out_dir):
     p = out_dir / "fig_h2_layers.png"
     fig.savefig(p, dpi=150, bbox_inches="tight"); plt.close(fig); print(f"Saved {p}")
 
-    # Fig 2 — H1: cross-lingual transfer at each cell's best layer, by model
+    # H1: cross-lingual transfer at best layer, by model
     if not h3.empty:
         piv = h3.pivot(index="feature", columns="model", values="cross_lang")
         err = h3.pivot(index="feature", columns="model", values="cross_std")
@@ -302,7 +462,7 @@ def make_figures(layer_df, xling_df, models, out_dir):
         p = out_dir / "fig_h1_models.png"
         fig.savefig(p, dpi=150, bbox_inches="tight"); plt.close(fig); print(f"Saved {p}")
 
-    # Fig 3 — H1 by layer: does any model pull ahead at any depth?
+    # H1: cross-lingual transfer by layer
     fig, axes = plt.subplots(1, len(mods), figsize=(5 * len(mods), 4),
                              squeeze=False, sharey=True)
     for ax, tag in zip(axes[0], mods):
@@ -323,7 +483,7 @@ def make_figures(layer_df, xling_df, models, out_dir):
     p = out_dir / "fig_h1_transfer_by_layer.png"
     fig.savefig(p, dpi=150, bbox_inches="tight"); plt.close(fig); print(f"Saved {p}")
 
-    # Fig 4 — H3: transfer-gap dumbbell, ONE PANEL PER MODEL (not aggregated)
+    # H3: transfer-gap dumbbell, one panel per model
     if not h3.empty:
         fig, axes = plt.subplots(1, len(mods), figsize=(5.5 * len(mods), 4.2),
                                  squeeze=False, sharex=True)
@@ -357,7 +517,7 @@ def make_figures(layer_df, xling_df, models, out_dir):
         p = out_dir / "fig_h3_transfer_gap.png"
         fig.savefig(p, dpi=150, bbox_inches="tight"); plt.close(fig); print(f"Saved {p}")
 
-    # Fig 5 — all-pairs language transfer matrix, per model
+    # all-pairs language transfer matrix, per model
     fig, axes = plt.subplots(1, len(mods), figsize=(4.4 * len(mods), 4),
                              squeeze=False)
     for ax, tag in zip(axes[0], mods):
@@ -381,13 +541,17 @@ def make_figures(layer_df, xling_df, models, out_dir):
     fig.savefig(p, dpi=150, bbox_inches="tight"); plt.close(fig); print(f"Saved {p}")
 
 
-# ── outputs ───────────────────────────────────────────────────────────────────
-def write_outputs(layer_df, xling_df, out_dir):
+# --- outputs ---
+def write_outputs(layer_df, xling_df, out_dir, gap_df=None):
     layer_df.to_csv(out_dir / "layer_df.csv", index=False)
     xling_df.to_csv(out_dir / "xling_df.csv", index=False)
     h3 = h3_table(layer_df, xling_df)
     if not h3.empty:
         h3.to_csv(out_dir / "h3_table.csv", index=False)
+    if gap_df is not None and not gap_df.empty:
+        gap_df.to_csv(out_dir / "gap_folds.csv", index=False)
+        gap_summary(gap_df).to_csv(out_dir / "gap_summary.csv", index=False)
+        gap_pairwise(gap_df).to_csv(out_dir / "gap_pairwise.csv", index=False)
 
     lines = ["RESULTS SUMMARY", "=" * 70, "",
              "Probes use GROUPED splits (by utterance); all metrics are mean over "
@@ -417,6 +581,25 @@ def write_outputs(layer_df, xling_df, out_dir):
                       ["model", "feature", "best_layer", "within_lang", "cross_lang",
                        "transfer_gap"]].round(3).to_string(index=False), ""]
 
+    if gap_df is not None and not gap_df.empty:
+        gs = gap_summary(gap_df)
+        gs["gap_[95% CI]"] = gs.apply(
+            lambda r: f"{r.gap_mean:.3f} [{r.ci_lo:.3f}, {r.ci_hi:.3f}]"
+                      + ("  *" if r.sig else ""), axis=1)
+        lines += ["H3 (STAT TEST) — paired k-fold transfer gap, 95% CI  "
+                  "(* = CI excludes 0 → gap is real):",
+                  gs.pivot(index="feature", columns="model",
+                           values="gap_[95% CI]").reindex(FEATURES).to_string(), ""]
+        gp = gap_pairwise(gap_df)
+        if not gp.empty:
+            gp["diff_[95% CI]"] = gp.apply(
+                lambda r: f"{r.mean_diff:.3f} [{r.ci_lo:.3f}, {r.ci_hi:.3f}]"
+                          + ("  *" if r.sig else ""), axis=1)
+            lines += ["H3 (STAT TEST) — pairwise gap differences, 95% CI  "
+                      "(* = features significantly differ):",
+                      gp[["model", "feature_a", "feature_b", "diff_[95% CI]"]]
+                      .to_string(index=False), ""]
+
     for model in sorted(set(layer_df.model)):
         lines += [f"All-pairs transfer matrix — {model} (rows=train, cols=test):",
                   language_matrix(layer_df, xling_df, model).astype(float).round(3).to_string(), ""]
@@ -427,7 +610,7 @@ def write_outputs(layer_df, xling_df, out_dir):
     print(f"\nSaved CSVs + summary to {out_dir}/")
 
 
-# ── main ──────────────────────────────────────────────────────────────────────
+# --- main ---
 def main():
     ap = argparse.ArgumentParser(description="Segment-level phonological probing (batch).")
     ap.add_argument("--n-probe", type=int, default=100,
@@ -439,6 +622,10 @@ def main():
                     help="Repeated grouped splits per within-language probe (error bars).")
     ap.add_argument("--layer-stride", type=int, default=1,
                     help="1 = probe every layer; 2 = every other (faster).")
+    ap.add_argument("--kfold", type=int, default=5,
+                    help="Folds for the H3 paired transfer-gap test.")
+    ap.add_argument("--kfold-repeats", type=int, default=5,
+                    help="Repeats of the k-fold gap test (more = tighter CIs).")
     args = ap.parse_args()
 
     models = {k: ALL_MODELS[k] for k in args.models if os.path.isdir(ALL_MODELS[k])}
@@ -459,13 +646,16 @@ def main():
     )
 
     t0 = time.time()
-    layer_df, xling_df = run_probes(models, args.n_probe, align_cache,
-                                    n_repeats=args.n_repeats,
-                                    layer_stride=args.layer_stride)
-    print(f"\nlayer_df: {layer_df.shape} | xling_df: {xling_df.shape}")
+    layer_df, xling_df, gap_df = run_probes(models, args.n_probe, align_cache,
+                                            n_repeats=args.n_repeats,
+                                            layer_stride=args.layer_stride,
+                                            kfold=args.kfold,
+                                            kfold_repeats=args.kfold_repeats)
+    print(f"\nlayer_df: {layer_df.shape} | xling_df: {xling_df.shape} | gap_df: {gap_df.shape}")
 
     make_figures(layer_df, xling_df, models, out_dir)
-    write_outputs(layer_df, xling_df, out_dir)
+    make_gap_figures(gap_df, models, out_dir)
+    write_outputs(layer_df, xling_df, out_dir, gap_df)
     print(f"\nTotal time: {(time.time()-t0)/60:.1f} min")
 
 
