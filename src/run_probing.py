@@ -80,13 +80,13 @@ def utt_gid(lang, s):
     be 1-D scalars)."""
     return f"{lang}|{s.get('id')}|{round(float(s.get('audio_length', 0.0)), 2)}"
 
-
+,
 def segment_xy(utts_by_lang, layer, feature, align_cache):
     """Build (X, y, groups) for one layer+feature using MMS forced alignment.
 
     Each phoneme is mean-pooled over the frames it actually occupies (spans from
     the alignment cache), rather than an even split across the utterance.
-    `groups` is the recording each phoneme came from, so train/test splits can be
+    groups is the recording each phoneme came from, so train/test splits can be
     grouped by utterance.
     """
     X, y, g = [], [], []

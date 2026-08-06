@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
-"""
-Extract Wav2Vec2 embeddings from FLEURS dataset.
-Usage: python extract_features.py --languages en_us de_de es_419 --max-samples 100
-"""
+
 
 import torch
 import numpy as np
