@@ -1,0 +1,89 @@
+uid: "015"
+date: 2026-07-06
+week: W11
+stage: probing
+status: success
+
+model:
+  tag: xlsr300m
+  hf_id: facebook/wav2vec2-xls-r-300m
+  pretraining: 128 languages
+  n_layers_incl_input: 25
+  hidden_size: 1024
+  legacy_tag_in_early_csvs: xl500
+  fine_tuned: false   # models are frozen throughout the project
+
+dataset:
+  name: google/fleurs
+  split: train
+  languages: [en_us, de_de, es_419]
+  utterances_per_language: 100
+  sampling_rate_hz: 16000
+
+condition:
+  summary: uniform_alignment / EN->others
+  frame_to_phoneme: uniform (utterance split evenly across its phonemes)
+  pooling: mean pool over frames in the phoneme's uniform slice
+  transfer_protocol: "train en_us -> test de_de, es_419"
+  features_probed: [voicing, nasal, manner, place]
+  segment_filters:
+    voicing: obstruents only
+    nasal: all segments
+    manner: consonants only
+    place: consonants only
+
+hyperparameters:
+  probe: logistic_regression
+  scaler: standard
+  max_iter: 2000
+  class_weight: balanced
+  n_probe: 100
+  layer_stride: 3
+  split_grouping: utterance
+
+seeds:
+  master_seed: 0
+  n_independent_seeds_run: 1
+  tier_a_three_seed_requirement: NOT_MET
+  variance_source: |
+    Single master seed. sklearn random_state=0 is fixed in probing.py for
+    evaluate_probe, cross_lingual_probe and paired_gap_kfold. Spread is
+    reported from repeated splits and bootstraps under that one seed, not from
+    independent seeds.
+
+compute:
+  cluster: FAU HPC (NHR@FAU), $WORK/BIMAP-FEATURE
+  partition: v100
+  slurm_job_ids: [1732401]
+  wall_clock_min: 54.1
+  conda_env: feature
+
+results:
+  metric: macro_f1
+  within_language: 0.395
+  cross_lingual: 0.379
+  majority_baseline: 0.618
+  aggregation: |
+    Mean over the four features, each taken at that feature's best layer (best
+    = highest mean within-language macro-F1). Cross-lingual is the mean over
+    all evaluated language pairs at the same layers.
+
+artifacts:
+  primary: results/20260706_21094441
+
+provenance:
+  confidence: confirmed
+  reconstructed_on: 2026-08-06
+  evidence:
+    - slurm/logs/probing_1732401.out
+    - results/20260706_21094441/results_summary.txt
+    - results/20260706_21094441/layer_df.csv
+
+notes: |
+  First end-to-end run of the full 4-feature grid. Near-baseline and flat
+  across depth (base manner 0.211 at L0 vs 0.206 at L12), which read at the
+  time as 'the models encode little phonology'. Retained deliberately: it is
+  the uniform-alignment control in Table 3 of the report. Directory
+  timestamp matches the job's finish time (21:09:48). Cross-lingual scores
+  sit at or below the majority baseline (0.618) — the run's own summary
+  reports transfer only for EN as the training language.

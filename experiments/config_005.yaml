@@ -1,0 +1,73 @@
+uid: "005"
+date: 2026-05-29
+week: W06
+stage: extraction
+status: failed
+
+model:
+  tag: base
+  hf_id: facebook/wav2vec2-base
+  pretraining: English only
+  n_layers_incl_input: 13
+  hidden_size: 768
+  legacy_tag_in_early_csvs: base
+  fine_tuned: false   # models are frozen throughout the project
+
+dataset:
+  name: google/fleurs
+  split: train
+  languages: [en_us, de_de, es_419]
+  utterances_per_language: 100
+  sampling_rate_hz: 16000
+
+condition:
+  summary: retry after env fix
+  frame_to_phoneme: "na"
+  pooling: "na"
+  transfer_protocol: "na"
+  features_probed: []
+
+hyperparameters:
+  script: scripts/extract_features.py
+
+seeds:
+  master_seed: "na"
+  n_independent_seeds_run: 0
+  tier_a_three_seed_requirement: not_applicable
+  variance_source: |
+    Single master seed. sklearn random_state=0 is fixed in probing.py for
+    evaluate_probe, cross_lingual_probe and paired_gap_kfold. Spread is
+    reported from repeated splits and bootstraps under that one seed, not from
+    independent seeds.
+
+compute:
+  cluster: FAU HPC (NHR@FAU), $WORK/BIMAP-FEATURE
+  partition: v100
+  node: tg074
+  slurm_job_ids: [1662287, 1662288, 1662289, 1662290, 1662291, 1662292, 1662293, 1662294, 1662295, 1662296, 1662297]
+  wall_clock_min: null
+  conda_env: feature
+
+results:
+  metric: "na"
+  within_language: "na"
+  cross_lingual: "na"
+  majority_baseline: "na"
+
+artifacts:
+  primary: slurm/logs/feature_extraction_1662287.err
+
+provenance:
+  confidence: confirmed
+  reconstructed_on: 2026-08-06
+  evidence:
+    - slurm/logs/feature_extraction_1662287.err
+    - slurm/logs/feature_extraction_1662297.err
+
+notes: |
+  Environment now works (torch imports, model config downloads succeed) but
+  the pytorch_model.bin download stalls on the HF Xet backend: the log shows
+  xet-read-token refreshes at 01:48, 02:36 and 02:56 with no progress
+  between them. Eleven job logs, all identical. This is the failure that
+  HF_HUB_DISABLE_XET=1 and slurm/prefetch.sh were added to prevent; both
+  appear in every later job script.

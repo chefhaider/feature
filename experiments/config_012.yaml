@@ -1,0 +1,69 @@
+uid: "012"
+date: 2026-06-29
+week: W10
+stage: labelling
+status: success
+
+model:
+  tag: "na"
+  note: not model-specific
+
+dataset:
+  name: google/fleurs
+  split: train
+  languages: [en_us, de_de, es_419]
+  utterances_per_language: 100
+  sampling_rate_hz: 16000
+
+condition:
+  summary: uniform frame assignment
+  frame_to_phoneme: uniform (utterance split evenly across its phonemes)
+  pooling: "na"
+  transfer_protocol: "na"
+  features_probed: [voicing, nasal, manner, place]
+  segment_filters:
+    voicing: obstruents only
+    nasal: all segments
+    manner: consonants only
+    place: consonants only
+
+hyperparameters:
+  script: src/precompute_phonemes.py (removed in 0edd662)
+  g2p: gruut
+  features_lib: panphon
+
+seeds:
+  master_seed: "na"
+  n_independent_seeds_run: 0
+  tier_a_three_seed_requirement: not_applicable
+  variance_source: |
+    Single master seed. sklearn random_state=0 is fixed in probing.py for
+    evaluate_probe, cross_lingual_probe and paired_gap_kfold. Spread is
+    reported from repeated splits and bootstraps under that one seed, not from
+    independent seeds.
+
+compute:
+  location: local / notebook
+  slurm_job_ids: []
+
+results:
+  metric: "na"
+  within_language: "na"
+  cross_lingual: "na"
+  majority_baseline: "na"
+
+artifacts:
+  primary: artifacts/phoneme_cache.pkl
+
+provenance:
+  confidence: confirmed
+  reconstructed_on: 2026-08-06
+  evidence:
+    - artifacts/phoneme_cache.pkl
+    - git 6c2555a
+
+notes: |
+  Built the phoneme label cache used by the W11 run. The generating script
+  was deleted in 0edd662 when forced alignment replaced uniform assignment;
+  the cache file is still committed but is now unused by any code path.
+  Retained as the input to the superseded baseline.

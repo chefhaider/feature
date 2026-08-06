@@ -1,0 +1,73 @@
+uid: "020"
+date: 2026-07-20
+week: W13
+stage: probing
+status: failed
+
+model:
+  tag: all
+  note: not model-specific
+
+dataset:
+  name: google/fleurs
+  split: train
+  languages: [en_us, de_de, es_419]
+  utterances_per_language: 100
+  sampling_rate_hz: 16000
+
+condition:
+  summary: forced_alignment / full layer grid
+  frame_to_phoneme: forced (MMS)
+  pooling: mean pool over aligned phoneme span
+  transfer_protocol: "train en_us -> test de_de, es_419"
+  features_probed: [voicing, nasal, manner, place]
+  segment_filters:
+    voicing: obstruents only
+    nasal: all segments
+    manner: consonants only
+    place: consonants only
+
+hyperparameters:
+  n_probe: 100
+  layer_stride: 1
+  n_repeats: 5
+  split_grouping: utterance
+
+seeds:
+  master_seed: 0
+  n_independent_seeds_run: 1
+  tier_a_three_seed_requirement: NOT_MET
+  variance_source: |
+    Single master seed. sklearn random_state=0 is fixed in probing.py for
+    evaluate_probe, cross_lingual_probe and paired_gap_kfold. Spread is
+    reported from repeated splits and bootstraps under that one seed, not from
+    independent seeds.
+
+compute:
+  cluster: FAU HPC (NHR@FAU), $WORK/BIMAP-FEATURE
+  partition: v100
+  node: tg071
+  slurm_job_ids: [1754119]
+  wall_clock_min: 1440.0
+  conda_env: feature
+
+results:
+  metric: "na"
+  within_language: "na"
+  cross_lingual: "na"
+  majority_baseline: "na"
+
+artifacts:
+  primary: slurm/logs/probing_1754119.err
+
+provenance:
+  confidence: confirmed
+  reconstructed_on: 2026-08-06
+  evidence:
+    - slurm/logs/probing_1754119.out
+    - slurm/logs/probing_1754119.err
+
+notes: |
+  CANCELLED AT 2026-07-21T14:19:12 DUE TO TIME LIMIT after a full 24 h.
+  Dropping layer_stride from 3 to 1 tripled the layer count while all three
+  models still ran inside one job. No results written.

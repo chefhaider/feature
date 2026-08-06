@@ -1,0 +1,90 @@
+uid: "018"
+date: 2026-07-14
+week: W12
+stage: probing
+status: success
+
+model:
+  tag: xlsr53
+  hf_id: facebook/wav2vec2-large-xlsr-53
+  pretraining: 53 languages
+  n_layers_incl_input: 25
+  hidden_size: 1024
+  legacy_tag_in_early_csvs: xl53
+  fine_tuned: false   # models are frozen throughout the project
+
+dataset:
+  name: google/fleurs
+  split: train
+  languages: [en_us, de_de, es_419]
+  utterances_per_language: 100
+  sampling_rate_hz: 16000
+
+condition:
+  summary: forced_alignment / EN->others
+  frame_to_phoneme: forced (MMS)
+  pooling: mean pool over frames inside the aligned phoneme span
+  transfer_protocol: "train en_us -> test de_de, es_419"
+  features_probed: [voicing, nasal, manner, place]
+  segment_filters:
+    voicing: obstruents only
+    nasal: all segments
+    manner: consonants only
+    place: consonants only
+
+hyperparameters:
+  probe: logistic_regression
+  scaler: standard
+  max_iter: 2000
+  class_weight: balanced
+  n_probe: 100
+  layer_stride: 3
+  split_grouping: utterance
+
+seeds:
+  master_seed: 0
+  n_independent_seeds_run: 1
+  tier_a_three_seed_requirement: NOT_MET
+  variance_source: |
+    Single master seed. sklearn random_state=0 is fixed in probing.py for
+    evaluate_probe, cross_lingual_probe and paired_gap_kfold. Spread is
+    reported from repeated splits and bootstraps under that one seed, not from
+    independent seeds.
+
+compute:
+  cluster: FAU HPC (NHR@FAU), $WORK/BIMAP-FEATURE
+  partition: v100
+  slurm_job_ids: [1744764]
+  wall_clock_min: 52.9
+  conda_env: feature
+
+results:
+  metric: macro_f1
+  within_language: 0.808
+  cross_lingual: 0.645
+  majority_baseline: 0.303
+  aggregation: |
+    Mean over the four features, each taken at that feature's best layer (best
+    = highest mean within-language macro-F1). Cross-lingual is the mean over
+    all evaluated language pairs at the same layers.
+
+artifacts:
+  primary: results/20260721_22064045
+
+provenance:
+  confidence: inferred
+  reconstructed_on: 2026-08-06
+  evidence:
+    - slurm/logs/probing_1744764.out
+    - results/20260721_22064045/results_summary.txt
+
+notes: |
+  Same models, same probes and the same layer grid as the W11 run — only the
+  frame-to-phoneme mapping changed — and within-language scores roughly
+  doubled (base mean 0.391 -> 0.774). This is the evidence that the earlier
+  null result was a measurement artefact. PROVENANCE CAVEAT: job 1744764
+  finished 2026-07-14 04:48 but the results directory is stamped
+  20260721_22064045, so the mapping is inferred from the matching layer grid
+  {0,3,6,9,12,18,24} and forced-alignment scores, not from a timestamp
+  match. The directory was most likely created when results/ was reorganised
+  on 2026-07-22 (commit e9d48e8).

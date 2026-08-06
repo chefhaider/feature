@@ -1,0 +1,74 @@
+uid: "010"
+date: 2026-06-11
+week: W07
+stage: extraction
+status: success
+
+model:
+  tag: xlsr53
+  hf_id: facebook/wav2vec2-large-xlsr-53
+  pretraining: 53 languages
+  n_layers_incl_input: 25
+  hidden_size: 1024
+  legacy_tag_in_early_csvs: xl53
+  fine_tuned: false   # models are frozen throughout the project
+
+dataset:
+  name: google/fleurs
+  split: train
+  languages: [en_us, de_de, es_419]
+  utterances_per_language: 100
+  sampling_rate_hz: 16000
+
+condition:
+  summary: "frozen model, all layers kept"
+  frame_to_phoneme: "na"
+  pooling: "na"
+  transfer_protocol: "na"
+  features_probed: []
+
+hyperparameters:
+  script: src/extract_features.py
+  max_samples: 100
+  dtype: float32
+  output_hidden_states: true
+
+seeds:
+  master_seed: "na"
+  n_independent_seeds_run: 0
+  tier_a_three_seed_requirement: not_applicable
+  variance_source: |
+    Single master seed. sklearn random_state=0 is fixed in probing.py for
+    evaluate_probe, cross_lingual_probe and paired_gap_kfold. Spread is
+    reported from repeated splits and bootstraps under that one seed, not from
+    independent seeds.
+
+compute:
+  cluster: FAU HPC (NHR@FAU), $WORK/BIMAP-FEATURE
+  partition: v100
+  node: tg074
+  slurm_job_ids: [1695372]
+  wall_clock_min: 10.1
+  gpu_max_mem_mib: 4266
+  conda_env: feature
+
+results:
+  metric: "na"
+  within_language: "na"
+  cross_lingual: "na"
+  majority_baseline: "na"
+
+artifacts:
+  primary: "artifacts/embeddings/xlsr53/ (gitignored, not in repo)"
+
+provenance:
+  confidence: confirmed
+  reconstructed_on: 2026-08-06
+  evidence:
+    - slurm/logs/extract_xlsr53_1695372.out
+
+notes: |
+  Hidden states for 100 utterances x 3 languages, every layer kept. These
+  embeddings feed every probing run from W11 onward. The output directory is
+  gitignored and is no longer present locally, so re-running any probing
+  experiment requires re-extraction first.

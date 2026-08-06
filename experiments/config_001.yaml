@@ -1,0 +1,71 @@
+uid: "001"
+date: 2026-04-24
+week: W01
+stage: probing
+status: success
+
+model:
+  tag: base
+  hf_id: facebook/wav2vec2-base
+  pretraining: English only
+  n_layers_incl_input: 13
+  hidden_size: 768
+  legacy_tag_in_early_csvs: base
+  fine_tuned: false   # models are frozen throughout the project
+
+dataset:
+  name: google/fleurs
+  split: train
+  languages: [en_us, de_de, es_419]
+  utterances_per_language: 100
+  sampling_rate_hz: 16000
+
+condition:
+  summary: utterance_level / no_alignment / EN->others
+  frame_to_phoneme: none (utterance-level labels)
+  pooling: whole-utterance mean pool
+  transfer_protocol: "train en_us -> test de_de, es_419"
+  features_probed: [voicing, manner]
+
+hyperparameters:
+  probe: logistic_regression
+  split_grouping: none
+  layers_probed: [0, 3, 6, 9, 12]
+
+seeds:
+  master_seed: "unrecorded"
+  n_independent_seeds_run: 1
+  tier_a_three_seed_requirement: NOT_MET
+  variance_source: |
+    Single master seed. sklearn random_state=0 is fixed in probing.py for
+    evaluate_probe, cross_lingual_probe and paired_gap_kfold. Spread is
+    reported from repeated splits and bootstraps under that one seed, not from
+    independent seeds.
+
+compute:
+  location: local / notebook
+  slurm_job_ids: []
+
+results:
+  metric: "unrecorded"
+  within_language: 0.62
+  cross_lingual: 0.618
+  majority_baseline: "na"
+
+artifacts:
+  primary: docs/experiments_phase1.csv
+
+provenance:
+  confidence: derived
+  reconstructed_on: 2026-08-06
+  evidence:
+    - docs/experiments_phase1.csv
+    - git 8f07c42..fa10839
+
+notes: |
+  Exploratory notebook sweep, run locally. within=mean of
+  'language_specific' rows, cross=mean of 'transfer' rows in the phase-1
+  CSV; the CSV records a bare 'score' with no metric definition, so the
+  metric is unrecorded. Scores land on 1/5 and 1/6 fractions, implying test
+  sets of ~5-6 segments — these numbers are directional only and are
+  superseded by the July runs.

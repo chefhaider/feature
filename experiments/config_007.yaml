@@ -1,0 +1,71 @@
+uid: "007"
+date: 2026-05-29
+week: W06
+stage: probing
+status: success
+
+model:
+  tag: xlsr53
+  hf_id: facebook/wav2vec2-large-xlsr-53
+  pretraining: 53 languages
+  n_layers_incl_input: 25
+  hidden_size: 1024
+  legacy_tag_in_early_csvs: xl53
+  fine_tuned: false   # models are frozen throughout the project
+
+dataset:
+  name: google/fleurs
+  split: train
+  languages: [en_us, de_de, es_419]
+  utterances_per_language: 100
+  sampling_rate_hz: 16000
+
+condition:
+  summary: utterance_level / no_alignment / EN->others
+  frame_to_phoneme: none (utterance-level labels)
+  pooling: whole-utterance mean pool
+  transfer_protocol: "train en_us -> test de_de, es_419"
+  features_probed: [voicing, manner]
+
+hyperparameters:
+  probe: logistic_regression
+  split_grouping: none
+  layers_probed: [0, 3, 6, 9, 12]
+
+seeds:
+  master_seed: "unrecorded"
+  n_independent_seeds_run: 1
+  tier_a_three_seed_requirement: NOT_MET
+  variance_source: |
+    Single master seed. sklearn random_state=0 is fixed in probing.py for
+    evaluate_probe, cross_lingual_probe and paired_gap_kfold. Spread is
+    reported from repeated splits and bootstraps under that one seed, not from
+    independent seeds.
+
+compute:
+  location: local / notebook
+  slurm_job_ids: []
+
+results:
+  metric: "unrecorded"
+  within_language: 0.687
+  cross_lingual: 0.719
+  majority_baseline: "na"
+
+artifacts:
+  primary: docs/experiments_phase2.csv
+
+provenance:
+  confidence: inferred
+  reconstructed_on: 2026-08-06
+  evidence:
+    - docs/experiments_phase2.csv
+    - git 2473989
+
+notes: |
+  Second exploratory sweep, same protocol as W01, scores ~0.02-0.03 higher.
+  Committed 2026-05-29 12:57, hours after that morning's extraction jobs
+  stalled, so the embeddings behind it cannot be tied to a surviving job log
+  — the underlying extraction is unidentified. Still utterance-level:
+  voicing stays near chance, which is the signal that eventually motivated
+  segment-level probing.
